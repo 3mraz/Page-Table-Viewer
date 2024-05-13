@@ -40,7 +40,6 @@ If there is a problem with your advisor (e.g., you don't get an answer in time),
 * [x] Get a project and an advisor.
 * [ ] Discuss project goals and requirements with your advisor (Requirements should be documented in `requirements.md`).
 * [ ] Have fun with the project (Remember to start with small steps).
-* [ ] TODO: is cms or lfs needed?
 * [ ] Submit everything (documentation, code) before the deadline in this repository.
 * [ ] Wait for the grade.
 
