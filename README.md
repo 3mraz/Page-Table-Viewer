@@ -1,12 +1,12 @@
-# Cysec Project: [Title]
+# Cysec Project: Page-Table Viewer
 
-**Student**: [Name]
+**Student**: Amr Jaafar
 
-**Advisor**: [Advisor Name]
+**Advisor**: Fabian Thomas
 
-**Project Goals**: [Brief description]
+**Project Goals**: Microarchitectural attacks often require interaction with low-level data structures, such as page tables. On Linux there is already a tool (PTEditor) that can read and write Linux page tables from C/C++ code, but there is no interactive viewer/editor yet. This project is about engineering such a viewer/editor based on PTEditor. The tool should provide a GUI that visualizes the page table and allows for live patching. Further, it should run as a statically linked Web App on remote machines, so that easy access via SSH port forwarding is possible.
 
-**Handout**: [dd.mm.yyyy]
+**Handout**: 13.05.2024
 
 ## Structure
 
