@@ -1,0 +1,1 @@
+cmd_/home/amr/Uni/Security_Project/cgo_test/src/module/pteditor.ko := ld -r -m elf_x86_64 -z noexecstack --no-warn-rwx-segments --build-id=sha1  -T arch/x86/module.lds -o /home/amr/Uni/Security_Project/cgo_test/src/module/pteditor.ko /home/amr/Uni/Security_Project/cgo_test/src/module/pteditor.o /home/amr/Uni/Security_Project/cgo_test/src/module/pteditor.mod.o;  true

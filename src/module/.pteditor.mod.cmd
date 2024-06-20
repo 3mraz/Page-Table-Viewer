@@ -1,0 +1,1 @@
+cmd_/home/amr/Uni/Security_Project/cgo_test/src/module/pteditor.mod := printf '%s\n'   pteditor.o | awk '!x[$$0]++ { print("/home/amr/Uni/Security_Project/cgo_test/src/module/"$$0) }' > /home/amr/Uni/Security_Project/cgo_test/src/module/pteditor.mod
