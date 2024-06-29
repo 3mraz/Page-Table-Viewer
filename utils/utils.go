@@ -58,12 +58,13 @@ type PTEntry struct {
 	S3   bool   // software 3
 	PatL bool   // huge page (1GB or 2MB)
 	Pfn  string // Page Frame Number
-	S4   bool   // software 4
-	Kp0  bool   // key protection 0
-	Kp1  bool   // key protection 1
-	Kp2  bool   // key protection 2
-	Kp3  bool   // key protection 3
-	Nx   bool   // no Execute
+	Vfn  string
+	S4   bool // software 4
+	Kp0  bool // key protection 0
+	Kp1  bool // key protection 1
+	Kp2  bool // key protection 2
+	Kp3  bool // key protection 3
+	Nx   bool // no Execute
 }
 
 func Virt2Phys(virtAddr string, pid uint64) string {
@@ -76,7 +77,7 @@ func Virt2Phys(virtAddr string, pid uint64) string {
 		panic(err)
 	}
 	// fmt.Println(virtAsInt)
-	phys := uint64(C.virt2Phys(unsafe.Pointer(uintptr(virtAsInt)), C.size_t(pid)))
+	phys := uint64(C.virt_2_phys(unsafe.Pointer(uintptr(virtAsInt)), C.size_t(pid)))
 	return fmt.Sprintf("0x%x", phys)
 }
 
@@ -100,7 +101,7 @@ func GetSystemPageSize() uint64 {
 	return uint64(C.ptedit_get_pagesize())
 }
 
-func ParsePTEntry(entry uint64) PTEntry {
+func ParsePTEntry(entry uint64, vaddr uint64) PTEntry {
 	var e PTEntry
 	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PRESENT)) == 1 {
 		e.P = true
@@ -160,22 +161,62 @@ func ParsePTEntry(entry uint64) PTEntry {
 		e.Nx = true
 	}
 	e.Pfn = fmt.Sprintf("0x%x", (entry>>12)&uint64((uint64(1)<<40)-1))
+	e.Vfn = fmt.Sprintf("0x%x", (vaddr))
 	return e
 }
 
 func GetFirstLvl(pid uint64) []PTEntry {
 	var ptEntries []PTEntry
-	entries := C.getMappedPML4Entries(C.size_t(pid))
+	entries := C.get_mapped_PML4_entries(C.size_t(pid))
 	defer C.free(unsafe.Pointer(entries))
 	length := int(C.FIRST_LEVEL_ENTRIES)
-	goEntries := (*[1 << 30]C.size_t)(unsafe.Pointer(entries))[:length:length]
+	goEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(entries))[:length:length]
 	for i, v := range goEntries {
-		if goEntries[i] != 0 {
-			ptEntries = append(ptEntries, ParsePTEntry(uint64(v)))
+		if goEntries[i].entry != 0 {
+			ptEntries = append(ptEntries, ParsePTEntry(uint64(v.entry), uint64(v.vaddr)))
 		}
 	}
-	for _, e := range ptEntries {
-		printStruct(e)
+	return ptEntries
+}
+
+func GetSecondLvl(pid uint64, pml4i uint64) []PTEntry {
+	var ptEntries []PTEntry
+	entries := C.get_mapped_PDPT_entries(C.size_t(pid), C.size_t(pml4i))
+	defer C.free(unsafe.Pointer(entries))
+	length := 512
+	goEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(entries))[:length:length]
+	for i, v := range goEntries {
+		if goEntries[i].entry != 0 {
+			ptEntries = append(ptEntries, ParsePTEntry(uint64(v.entry), uint64(v.vaddr)))
+		}
+	}
+	return ptEntries
+}
+
+func GetThirdLvl(pid uint64, pml4i uint64, pdpti uint64) []PTEntry {
+	var ptEntries []PTEntry
+	entries := C.get_mapped_PD_entries(C.size_t(pid), C.size_t(pml4i), C.size_t(pdpti))
+	defer C.free(unsafe.Pointer(entries))
+	length := 512
+	goEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(entries))[:length:length]
+	for i, v := range goEntries {
+		if goEntries[i].entry != 0 {
+			ptEntries = append(ptEntries, ParsePTEntry(uint64(v.entry), uint64(v.vaddr)))
+		}
+	}
+	return ptEntries
+}
+
+func GetFourthLvl(pid uint64, pml4i uint64, pdpti uint64, pdi uint64) []PTEntry {
+	var ptEntries []PTEntry
+	entries := C.get_PTE_entries(C.size_t(pid), C.size_t(pml4i), C.size_t(pdpti), C.size_t(pdi))
+	defer C.free(unsafe.Pointer(entries))
+	length := 512
+	goEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(entries))[:length:length]
+	for i, v := range goEntries {
+		if goEntries[i].entry != 0 {
+			ptEntries = append(ptEntries, ParsePTEntry(uint64(v.entry), uint64(v.vaddr)))
+		}
 	}
 	return ptEntries
 }
@@ -189,4 +230,8 @@ func printStruct(ptEntry PTEntry) {
 		fieldValue := v.Field(i).Interface()
 		fmt.Printf("%s: %v\n", fieldName, fieldValue)
 	}
+}
+
+func numOfEntriesPerLvl() int {
+	return int(C.num_entries_per_lvl())
 }

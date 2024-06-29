@@ -12,46 +12,73 @@
       integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
       crossorigin="anonymous"
     ></script>
+    <!-- <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/multi-swap.js"></script> -->
   </head>
-  <body>
+  <body hx-boost="true">
     <h1 class="text-2xl mx-2 my-3">Page Table Viewer</h1>
     <div id="pid-div" class="w-full">
-      <form
-        id="myForm"
-        hx-post="/pid"
-        hx-target="#virt-div"
-        hx-swap="innerHTML"
-      >
+      <form id="myForm">
         <input
-          class="border border-black"
+          class="border border-black m-2 rounded p-1"
           type="text"
           name="pid"
           placeholder="Process Id"
           required
         />
-        <button type="submit" class="border-2 border-black">Submit</button>
+        <button
+          hx-post="/pid"
+          hx-target="#pid"
+          hx-swap="outerHTML"
+          type="submit"
+          class="border-2 border-black p-1 rounded bg-gray-50 text-sm"
+        >
+          Submit
+        </button>
       </form>
     </div>
-    <div id="virt-div" class="w-full"></div>
-    <div id="page-tables" class="border-2 border-black w-full h-screen mt-3">
-      <div id="pml4" class="border-2 border-black w-1/5 overflow-x-auto">
-        <table class="table-auto w-full">
-          <thead>
-            <th class="border-2 border-gray-300 text-center text-xs w-1/5">
-              idx
-            </th>
-            <th class="border-2 border-gray-300 text-center text-xs w-2/3">
-              addr
-            </th>
-          </thead>
-          <tbody class="w-full text-center text-xs">
-            <tr>
-              <td class="border border-black">0x000</td>
-              <td class="border border-black">0x000000000</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div id="virt-div" class="w-full mx-2">
+      <label id="pid" for="virt"><b>Process Id:</b> 0</label>
+      <form id="myForm">
+        <input
+          class="border border-black rounded p-1 my-1"
+          type="text"
+          name="virt"
+          placeholder="virt. address"
+          required
+        />
+        <button
+          type="submit"
+          class="border-2 border-black p-1 rounded bg-gray-50 text-sm"
+          hx-post="/translate"
+          hx-target="#phys"
+          hx-swap="innerHTML"
+        >
+          Translate
+        </button>
+        <label id="phys" class="border-2 border-black p-1 bg-blue-50 text-sm"
+          >{{ .Phys }}</label
+        >
+      </form>
+    </div>
+    <button
+      hx-post="/show-tables"
+      hx-swap="outerHTML"
+      hx-target="#pml4"
+      type="submit"
+      class="border-2 border-black p-1 rounded bg-gray-50 text-sm m-2"
+    >
+      Show Tables
+    </button>
+    <div id="page-tables" class="w-full h-screen mt-3 flex">
+      {{ template "pml4" }} {{define "pml4"}}
+      <div id="pml4"></div>
+      {{end}} {{template "pdpt"}} {{define "pdpt"}}
+      <div id="pdpt"></div>
+      {{end}} {{template "pd"}} {{define "pd"}}
+      <div id="pd"></div>
+      {{end}}{{template "pte"}} {{define "pte"}}
+      <div id="pte"></div>
+      {{end}}
     </div>
   </body>
 </html>
