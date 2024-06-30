@@ -34,8 +34,8 @@ func main() {
 		context := make(map[string]any)
 		context["Pid"] = strconv.FormatUint(pid, 10)
 		context["Phys"] = "0x000000000"
-		tmpl := template.Must(template.ParseFiles("templates/index.html"))
-		tmpl.Execute(w, context)
+		templ := template.Must(template.ParseFiles("templates/index.html"))
+		templ.Execute(w, context)
 	}
 
 	pidHandler := func(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +95,13 @@ func main() {
 		}
 		context := make(map[string]any)
 		context["vAddrs"] = vAddrs
-		tmpl := template.Must(template.ParseFiles("templates/index.html", "templates/pml4.html"))
+		context["tmplName"] = "pml4"
+		context["nxtLvlName"] = "pdpt"
+		context["nxtLvlNum"] = "second"
+		tmpl := template.Must(template.ParseFiles(
+			"templates/pml4.html",
+			"templates/pte-table.html",
+		))
 		tmpl.ExecuteTemplate(w, "pml4", context)
 	}
 
@@ -133,7 +139,13 @@ func main() {
 		}
 		context := make(map[string]any)
 		context["vAddrs"] = vAddrs
-		tmpl := template.Must(template.ParseFiles("templates/index.html", "templates/pml4.html", "templates/pdpt.html"))
+		context["tmplName"] = "pdpt"
+		context["nxtLvlName"] = "pd"
+		context["nxtLvlNum"] = "third"
+		tmpl := template.Must(template.ParseFiles(
+			"templates/pte-table.html",
+			"templates/pdpt.html",
+		))
 		tmpl.ExecuteTemplate(w, "pdpt", context)
 	}
 
@@ -171,11 +183,12 @@ func main() {
 		}
 		context := make(map[string]any)
 		context["vAddrs"] = vAddrs
+		context["tmplName"] = "pd"
+		context["nxtLvlName"] = "pte"
+		context["nxtLvlNum"] = "fourth"
 		tmpl := template.Must(template.ParseFiles(
-			"templates/index.html",
-			"templates/pml4.html",
-			"templates/pdpt.html",
 			"templates/pd.html",
+			"templates/pte-table.html",
 		))
 		tmpl.ExecuteTemplate(w, "pd", context)
 	}
@@ -214,12 +227,12 @@ func main() {
 		}
 		context := make(map[string]any)
 		context["vAddrs"] = vAddrs
+		context["tmplName"] = "pte"
+		context["nxtLvlName"] = "phys"
+		context["nxtLvlNum"] = "phys"
 		tmpl := template.Must(template.ParseFiles(
-			"templates/index.html",
-			"templates/pml4.html",
-			"templates/pdpt.html",
-			"templates/pd.html",
 			"templates/pte.html",
+			"templates/pte-table.html",
 		))
 		tmpl.ExecuteTemplate(w, "pte", context)
 	}
@@ -235,11 +248,9 @@ func main() {
 			return
 		}
 		entryPfn := r.FormValue("pfn")
-		fmt.Println("entry pfn: " + entryPfn)
 		context := make(map[string]utils.PTEntry)
 		context["entry"] = ALL_ENTRIES[entryPfn]
 		tmpl := template.Must(template.ParseFiles(
-			"templates/index.html",
 			"templates/pml4.html",
 			"templates/pdpt.html",
 			"templates/pd.html",

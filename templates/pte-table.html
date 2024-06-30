@@ -1,0 +1,51 @@
+{{ define "pte-table" }}
+<div
+  id="{{.tmplName}}"
+  class="w-1/4 m-2 h-1/2 overflow-auto border-2 border-gray-300"
+>
+  <table class="table-auto w-full border-separate">
+    <thead
+      class="z-10 w-full sticky top-0 border uppercase bg-white text-center text-xs"
+    >
+      <th class="border border-gray-300">IDX</th>
+      <th class="border border-gray-300">PFN</th>
+      <th class="border border-gray-300">VFN</th>
+      <th class="border border-gray-300">P</th>
+    </thead>
+    <tbody class="w-full text-center text-xs">
+      {{range $i, $entry := .vAddrs}} {{if $entry.P}}
+      <tr
+        class="bg-green-200"
+        hx-post="/full-entry"
+        hx-vals='{"pfn": "{{$entry.Pfn}}"}'
+        hx-swap="outerHTML"
+        hx-target="#full-entry"
+      >
+        <td class="border border-gray-300">{{$i}}</td>
+        <td class="border border-gray-300">{{$entry.Pfn}}</td>
+        <td class="border border-gray-300">{{$entry.Vfn}}</td>
+        <td class="border border-gray-300">1</td>
+        <td class="border border-gray-300">
+          <button
+            class="border border-black p-1 rounded bg-gray-50 text-sm z-50"
+            hx-post="/{{$.nxtLvlNum}}-lvl"
+            hx-vals='{"{{$.tmplName}}_idx": "{{$i}}"}'
+            hx-swap="outerHTML"
+            hx-target="#{{$.nxtLvlName}}"
+          >
+            &rarr;
+          </button>
+        </td>
+      </tr>
+      {{else}}
+      <tr class="bg-red-200">
+        <td class="border border-gray-300">{{$i}}</td>
+        <td class="border border-gray-300">0x0</td>
+        <td class="border border-gray-300">{{$entry.Vfn}}</td>
+        <td class="border border-gray-300">0</td>
+      </tr>
+      {{end}} {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
