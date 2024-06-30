@@ -51,9 +51,10 @@ int is_present(size_t entry) {
 PTEntry *get_mapped_PML4_entries(size_t pid) {
   size_t root = ptedit_get_paging_root(pid);
   size_t pagesize = ptedit_get_pagesize();
-  PTEntry *entries = (PTEntry *)malloc(num_entries_per_lvl() * sizeof(PTEntry));
-  size_t *pml4 = (size_t *)malloc(num_entries_per_lvl() * sizeof(size_t));
-  memset((void *)entries, 0, num_entries_per_lvl() * sizeof(PTEntry));
+  PTEntry *entries =
+      (PTEntry *)malloc(pagesize / sizeof(size_t) * sizeof(PTEntry));
+  size_t *pml4 = (size_t *)malloc(pagesize / sizeof(size_t) * sizeof(size_t));
+  memset((void *)entries, 0, pagesize / sizeof(size_t) * sizeof(PTEntry));
   ptedit_read_physical_page(root / pagesize, (char *)pml4);
 
   size_t pml4i;

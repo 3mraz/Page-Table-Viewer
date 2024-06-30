@@ -61,7 +61,7 @@
           >
         </form>
       </div>
-      {{template "full-entry"}} {{define "full-entry"}}
+      {{block "full-entry" .}}
       <div
         id="full-entry"
         class="bg-blue-400 row-start-1 col-start-2 text-center content-center rounded mx-2"
@@ -71,7 +71,8 @@
       {{end}}
     </div>
     <button
-      hx-post="/show-tables"
+      hx-post="/table"
+      hx-vals='{"lvl": "0", "idx": "0"}'
       hx-swap="outerHTML"
       hx-target="#pml4"
       type="submit"
@@ -79,14 +80,16 @@
     >
       Show Tables
     </button>
+    <!-- <input type="checkbox" name="only-present" value="Show only present" /> -->
+    <!-- <label for="only-present" class="text-base">show only present</label> -->
     <div id="page-tables" class="w-full h-screen mt-3 flex">
-      {{ template "pml4" }} {{define "pml4"}}
+      {{block "pml4" .}}
       <div id="pml4"></div>
-      {{end}} {{template "pdpt"}} {{define "pdpt"}}
+      {{end}} {{block "pdpt" .}}
       <div id="pdpt"></div>
-      {{end}} {{template "pd"}} {{define "pd"}}
+      {{end}} {{block "pd" .}}
       <div id="pd"></div>
-      {{end}}{{template "pte"}} {{define "pte"}}
+      {{end}} {{block "pte" .}}
       <div id="pte"></div>
       {{end}}
     </div>

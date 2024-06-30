@@ -10,6 +10,7 @@
       <th class="border border-gray-300">IDX</th>
       <th class="border border-gray-300">PFN</th>
       <th class="border border-gray-300">VFN</th>
+      <!-- TODO: maybe button on P to display only mapped entries -->
       <th class="border border-gray-300">P</th>
     </thead>
     <tbody class="w-full text-center text-xs">
@@ -28,8 +29,8 @@
         <td class="border border-gray-300">
           <button
             class="border border-black p-1 rounded bg-gray-50 text-sm z-50"
-            hx-post="/{{$.nxtLvlNum}}-lvl"
-            hx-vals='{"{{$.tmplName}}_idx": "{{$i}}"}'
+            hx-post="/table"
+            hx-vals='{"idx": "{{$i}}", "lvl": "{{$.lvl}}"}'
             hx-swap="outerHTML"
             hx-target="#{{$.nxtLvlName}}"
           >
