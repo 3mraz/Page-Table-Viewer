@@ -1,5 +1,6 @@
 node_modules/
 .air.toml
+notes.md
 tmp/
 src/libPTEdit.a
 src/demos/

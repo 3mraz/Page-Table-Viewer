@@ -1,0 +1,76 @@
+{{define "full-entry"}}
+<div
+  id="full-entry"
+  class="bg-blue-400 row-start-1 col-start-2 text-center content-center mx-2 rounded p-2"
+>
+  <table class="table-auto w-full border-separate border border-black">
+    <thead
+      class="z-10 w-full sticky top-0 border uppercase bg-white text-center text-xs"
+    >
+      <th class="border-2 border-gray-300">NX</th>
+      <th class="border-2 border-gray-300">PFN</th>
+      <th class="border-2 border-gray-300">VFN</th>
+      <th class="border-2 border-gray-300">H</th>
+      <th class="border-2 border-gray-300">S1</th>
+      <th class="border-2 border-gray-300">S2</th>
+      <th class="border-2 border-gray-300">S3</th>
+      <th class="border-2 border-gray-300">G</th>
+      <th class="border-2 border-gray-300">S</th>
+      <th class="border-2 border-gray-300">D</th>
+      <th class="border-2 border-gray-300">A</th>
+      <th class="border-2 border-gray-300">UC</th>
+      <th class="border-2 border-gray-300">WT</th>
+      <th class="border-2 border-gray-300">U</th>
+      <th class="border-2 border-gray-300">W</th>
+      <th class="border-2 border-gray-300">P</th>
+    </thead>
+    <tbody class="w-full text-center text-xs"></tbody>
+    <tr class="bg-green-200">
+      <td class="border-2 border-gray-300">
+        {{if .entry.Nx}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">{{.entry.Pfn}}</td>
+      <td class="border-2 border-gray-300">{{.entry.Vfn}}</td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.PatL}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.S1}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.S2}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.S3}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.G}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.Pat}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.D}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.A}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.Dc}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.Wt}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.U}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.W}} 1 {{else}} 0 {{end}}
+      </td>
+      <td class="border-2 border-gray-300">
+        {{if .entry.P}} 1 {{else}} 0 {{end}}
+      </td>
+    </tr>
+  </table>
+</div>
+{{end}}
