@@ -14,58 +14,68 @@
     ></script>
     <!-- <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/multi-swap.js"></script> -->
   </head>
-  <body hx-boost="true">
+  <body hx-boost="true" class="text-sm">
     <h1 class="text-2xl mx-2 my-3">Page Table Viewer</h1>
-    <div id="pid-div" class="w-full">
-      <form id="myForm">
-        <input
-          class="border border-black m-2 rounded p-1"
-          type="text"
-          name="pid"
-          placeholder="Process Id"
-          required
-        />
-        <button
-          hx-post="/pid"
-          hx-target="#pid"
-          hx-swap="outerHTML"
-          type="submit"
-          class="border-2 border-black p-1 rounded bg-gray-50 text-sm"
-        >
-          Submit
-        </button>
-      </form>
-    </div>
-    <div id="virt-div" class="w-full mx-2">
-      <label id="pid" for="virt"><b>Process Id:</b> 0</label>
-      <form id="myForm">
-        <input
-          class="border border-black rounded p-1 my-1"
-          type="text"
-          name="virt"
-          placeholder="virt. address"
-          required
-        />
-        <button
-          type="submit"
-          class="border-2 border-black p-1 rounded bg-gray-50 text-sm"
-          hx-post="/translate"
-          hx-target="#phys"
-          hx-swap="innerHTML"
-        >
-          Translate
-        </button>
-        <label id="phys" class="border-2 border-black p-1 bg-blue-50 text-sm"
-          >{{ .Phys }}</label
-        >
-      </form>
+    <div class="grid gap-2 grid-cols-2 grid-rows-2">
+      <div id="pid-div">
+        <form id="myForm">
+          <input
+            class="border border-black m-2 rounded p-1"
+            type="text"
+            name="pid"
+            placeholder="Process Id"
+            required
+          />
+          <button
+            hx-post="/pid"
+            hx-target="#pid"
+            hx-swap="outerHTML"
+            type="submit"
+            class="border-2 border-black p-1 rounded bg-gray-50"
+          >
+            Submit
+          </button>
+        </form>
+      </div>
+      <div id="virt-div" class="mx-2 row-start-2">
+        <label id="pid" for="virt"><b>Process Id:</b> 0</label>
+        <form id="myForm">
+          <input
+            class="border border-black rounded p-1 my-1"
+            type="text"
+            name="virt"
+            placeholder="virt. address"
+            required
+          />
+          <button
+            type="submit"
+            class="border-2 border-black p-1 rounded bg-gray-50"
+            hx-post="/translate"
+            hx-target="#phys"
+            hx-swap="innerHTML"
+          >
+            Translate
+          </button>
+          <label id="phys" class="border-2 border-black p-1 bg-blue-50"
+            >{{ .Phys }}</label
+          >
+        </form>
+      </div>
+      {{template "full-entry"}} {{define "full-entry"}}
+      <div
+        id="full-entry"
+        class="bg-blue-400 row-start-1 col-start-1 text-center content-center rounded mx-2"
+      >
+        Click on entry to display full entry here
+      </div>
+      {{end}}
     </div>
     <button
       hx-post="/show-tables"
       hx-swap="outerHTML"
       hx-target="#pml4"
       type="submit"
-      class="border-2 border-black p-1 rounded bg-gray-50 text-sm m-2"
+      class="border-2 border-black p-1 rounded bg-gray-50 m-2"
     >
       Show Tables
     </button>

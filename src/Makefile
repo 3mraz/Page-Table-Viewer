@@ -5,7 +5,7 @@ AR = ar
 ARFLAGS = rcs
 
 
-BINS = header pteditor ptedit.o libPTEdit.a
+BINS = header pteditor ptedit.o libPTEdit.a demos
 
 all: $(BINS) 
 
@@ -20,12 +20,15 @@ pteditor: module/pteditor.c
 libPTEdit.a: ptedit.o
 	$(AR) $(ARFLAGS) libPTEdit.a ptedit.o
 
+demos: header pteditor
+	cd demos && make
 
 deb:
 	dpkg-buildpackage
 
 clean:
 	cd module && make clean
+	cd demos && make clean
 	rm -f *.a
 
 

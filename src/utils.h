@@ -22,6 +22,7 @@ size_t virt_2_phys(void *target, size_t pid);
 #endif
 
 int is_present(size_t entry);
+int bit_set(size_t entry, size_t bit);
 PTEntry *get_mapped_PML4_entries(size_t pid);
 PTEntry *get_mapped_PDPT_entries(size_t pid, size_t pml4i);
 PTEntry *get_mapped_PD_entries(size_t pid, size_t pml4i, size_t pdpti);

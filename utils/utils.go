@@ -103,61 +103,61 @@ func GetSystemPageSize() uint64 {
 
 func ParsePTEntry(entry uint64, vaddr uint64) PTEntry {
 	var e PTEntry
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PRESENT)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PRESENT)) == 1 {
 		e.P = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_RW)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_RW)) == 1 {
 		e.W = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_USER)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_USER)) == 1 {
 		e.U = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PWT)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PWT)) == 1 {
 		e.Wt = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PCD)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PCD)) == 1 {
 		e.Dc = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_ACCESSED)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_ACCESSED)) == 1 {
 		e.A = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_DIRTY)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_DIRTY)) == 1 {
 		e.D = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PSE)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PSE)) == 1 {
 		e.Pat = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_GLOBAL)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_GLOBAL)) == 1 {
 		e.G = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_SOFTW1)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_SOFTW1)) == 1 {
 		e.S1 = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_SOFTW2)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_SOFTW2)) == 1 {
 		e.S2 = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_SOFTW3)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_SOFTW3)) == 1 {
 		e.S3 = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PAT_LARGE)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PAT_LARGE)) == 1 {
 		e.PatL = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_SOFTW4)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_SOFTW4)) == 1 {
 		e.S4 = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PKEY_BIT0)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PKEY_BIT0)) == 1 {
 		e.Kp0 = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PKEY_BIT1)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PKEY_BIT1)) == 1 {
 		e.Kp1 = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PKEY_BIT2)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PKEY_BIT2)) == 1 {
 		e.Kp2 = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_PKEY_BIT3)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PKEY_BIT3)) == 1 {
 		e.Kp3 = true
 	}
-	if entry&(1<<uint64(C.PTEDIT_PAGE_BIT_NX)) == 1 {
+	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_NX)) == 1 {
 		e.Nx = true
 	}
 	e.Pfn = fmt.Sprintf("0x%x", (entry>>12)&uint64((uint64(1)<<40)-1))

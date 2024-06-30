@@ -30,6 +30,10 @@ size_t virt_2_phys(void *target, size_t pid) {
   return phys;
 }
 
+int bit_set(size_t entry, size_t bit) {
+  return (!!((entry) & (1ull << (bit))));
+}
+
 int is_present(size_t entry) {
 #if defined(__i386__) || defined(__x86_64__)
   return entry & (1ull << PTEDIT_PAGE_BIT_PRESENT);

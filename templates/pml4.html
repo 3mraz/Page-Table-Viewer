@@ -12,7 +12,13 @@
     </thead>
     <tbody class="w-full text-center text-xs">
       {{range $i, $entry := .vAddrs}} {{if $entry.P}}
-      <tr class="bg-green-200">
+      <tr
+        class="bg-green-200"
+        hx-post="/full-entry"
+        hx-vals='{"pfn": "{{$entry.Pfn}}"}'
+        hx-swap="outerHTML"
+        hx-target="#full-entry"
+      >
         <td class="border-2 border-gray-300">{{$i}}</td>
         <td class="border-2 border-gray-300">{{$entry.Pfn}}</td>
         <td class="border-2 border-gray-300">{{$entry.Vfn}}</td>
@@ -28,7 +34,7 @@
             hx-swap="outerHTML"
             hx-target="#pdpt"
           >
-            lvl2
+            &rarr;
           </button>
         </td>
       </tr>

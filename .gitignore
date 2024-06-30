@@ -2,8 +2,7 @@ node_modules/
 .air.toml
 tmp/
 src/libPTEdit.a
-src/memmap
-src/memmap.c
+src/demos/
 src/module/.Module.symvers.cmd
 src/module/.modules.order.cmd
 src/module/.pteditor.ko.cmd
