@@ -10,11 +10,49 @@
       <th class="border border-gray-300">IDX</th>
       <th class="border border-gray-300">PFN</th>
       <th class="border border-gray-300">VFN</th>
-      <!-- TODO: maybe button on P to display only mapped entries -->
-      <th class="border border-gray-300">P</th>
+      <th
+        class="border border-gray-300 {{if .onlyPresent }} bg-green-300 {{else}} bg-red-300 {{end}}"
+        hx-post="/table"
+        hx-target="#{{.tmplName}}"
+        hx-swap="outerHTML"
+        hx-vals='js:{"idx": -1, "lvl": {{$.lvl}}-1, "present": "true"}'
+      >
+        P
+      </th>
     </thead>
     <tbody class="w-full text-center text-xs">
-      {{range $i, $entry := .vAddrs}} {{if $entry.P}}
+      {{if not .onlyPresent}} {{range $i, $entry := .vAddrs}} {{if $entry.P}}
+      <tr
+        class="bg-green-200"
+        hx-post="/full-entry"
+        hx-vals='{"pfn": "{{$entry.Pfn}}"}'
+        hx-swap="outerHTML"
+        hx-target="#full-entry"
+      >
+        <td class="border border-gray-300">{{$i}}</td>
+        <td class="border border-gray-300">{{$entry.Pfn}}</td>
+        <td class="border border-gray-300">{{$entry.Vfn}}</td>
+        <td class="border border-gray-300">1</td>
+        <td class="border border-gray-300">
+          <button
+            class="border border-black p-1 rounded bg-gray-50 text-sm z-50"
+            hx-post="/table"
+            hx-vals='{"idx": {{$i}}, "lvl": {{$.lvl}}}'
+            hx-swap="outerHTML"
+            hx-target="#{{$.nxtLvlName}}"
+          >
+            &rarr;
+          </button>
+        </td>
+      </tr>
+      {{else}}
+      <tr class="bg-red-200">
+        <td class="border border-gray-300">{{$i}}</td>
+        <td class="border border-gray-300">0x0</td>
+        <td class="border border-gray-300">{{$entry.Vfn}}</td>
+        <td class="border border-gray-300">0</td>
+      </tr>
+      {{end}} {{end}} {{else}} {{range $i, $entry := .vAddrs}} {{if $entry.P}}
       <tr
         class="bg-green-200"
         hx-post="/full-entry"
@@ -38,14 +76,7 @@
           </button>
         </td>
       </tr>
-      {{else}}
-      <tr class="bg-red-200">
-        <td class="border border-gray-300">{{$i}}</td>
-        <td class="border border-gray-300">0x0</td>
-        <td class="border border-gray-300">{{$entry.Vfn}}</td>
-        <td class="border border-gray-300">0</td>
-      </tr>
-      {{end}} {{end}}
+      {{end}} {{end}} {{end}}
     </tbody>
   </table>
 </div>

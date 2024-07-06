@@ -179,7 +179,7 @@ func GetFirstLvl(pid uint64) []PTEntry {
 	return ptEntries
 }
 
-func GetSecondLvl(pid uint64, pml4i uint64) []PTEntry {
+func GetSecondLvl(pid uint64, pml4i int64) []PTEntry {
 	var ptEntries []PTEntry
 	entries := C.get_mapped_PDPT_entries(C.size_t(pid), C.size_t(pml4i))
 	defer C.free(unsafe.Pointer(entries))
@@ -193,7 +193,7 @@ func GetSecondLvl(pid uint64, pml4i uint64) []PTEntry {
 	return ptEntries
 }
 
-func GetThirdLvl(pid uint64, pml4i uint64, pdpti uint64) []PTEntry {
+func GetThirdLvl(pid uint64, pml4i int64, pdpti int64) []PTEntry {
 	var ptEntries []PTEntry
 	entries := C.get_mapped_PD_entries(C.size_t(pid), C.size_t(pml4i), C.size_t(pdpti))
 	defer C.free(unsafe.Pointer(entries))
@@ -207,7 +207,7 @@ func GetThirdLvl(pid uint64, pml4i uint64, pdpti uint64) []PTEntry {
 	return ptEntries
 }
 
-func GetFourthLvl(pid uint64, pml4i uint64, pdpti uint64, pdi uint64) []PTEntry {
+func GetFourthLvl(pid uint64, pml4i int64, pdpti int64, pdi int64) []PTEntry {
 	var ptEntries []PTEntry
 	entries := C.get_PTE_entries(C.size_t(pid), C.size_t(pml4i), C.size_t(pdpti), C.size_t(pdi))
 	defer C.free(unsafe.Pointer(entries))
@@ -221,7 +221,7 @@ func GetFourthLvl(pid uint64, pml4i uint64, pdpti uint64, pdi uint64) []PTEntry 
 	return ptEntries
 }
 
-func printStruct(ptEntry PTEntry) {
+func PrintStruct(ptEntry PTEntry) {
 	fmt.Println("---------------------------- PTEntry ----------------------------------")
 	t := reflect.TypeOf(ptEntry)
 	v := reflect.ValueOf(ptEntry)
