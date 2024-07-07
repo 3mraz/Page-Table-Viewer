@@ -21,9 +21,9 @@
       </th>
     </thead>
     <tbody class="w-full text-center text-xs">
-      {{if not .onlyPresent}} {{range $i, $entry := .vAddrs}} {{if $entry.P}}
+      {{if not .onlyPresent}} {{range $i, $entry := .entries}}
       <tr
-        class="bg-green-200"
+        class="bg-{{$entry.Color}}-200"
         hx-post="/full-entry"
         hx-vals='{"pfn": "{{$entry.Pfn}}"}'
         hx-swap="outerHTML"
@@ -32,8 +32,11 @@
         <td class="border border-gray-300">{{$i}}</td>
         <td class="border border-gray-300">{{$entry.Pfn}}</td>
         <td class="border border-gray-300">{{$entry.Vfn}}</td>
-        <td class="border border-gray-300">1</td>
         <td class="border border-gray-300">
+          {{if $entry.P }}1 {{else}} 0{{end}}
+        </td>
+        <td class="border border-gray-300">
+          {{if $entry.P}}
           <button
             class="border border-black p-1 rounded bg-gray-50 text-sm z-50"
             hx-post="/table"
@@ -43,18 +46,12 @@
           >
             &rarr;
           </button>
+          {{end}}
         </td>
       </tr>
-      {{else}}
-      <tr class="bg-red-200">
-        <td class="border border-gray-300">{{$i}}</td>
-        <td class="border border-gray-300">0x0</td>
-        <td class="border border-gray-300">{{$entry.Vfn}}</td>
-        <td class="border border-gray-300">0</td>
-      </tr>
-      {{end}} {{end}} {{else}} {{range $i, $entry := .vAddrs}} {{if $entry.P}}
+      {{end}} {{else}} {{range $i, $entry := .entries}} {{if $entry.P}}
       <tr
-        class="bg-green-200"
+        class="bg-{{$entry.Color}}-200"
         hx-post="/full-entry"
         hx-vals='{"pfn": "{{$entry.Pfn}}"}'
         hx-swap="outerHTML"

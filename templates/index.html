@@ -44,9 +44,19 @@
             class="border border-black rounded p-1 my-1"
             type="text"
             name="virt"
-            placeholder="virt. address"
+            placeholder="virt. address (E.g., 0xffffffffffff)"
             required
           />
+          <button
+            type="submit"
+            id="path"
+            class="border-2 border-black p-1 rounded bg-gray-50"
+            hx-post="/show-path"
+            hx-swap="outerHTML"
+            hx-target="#page-tables"
+          >
+            Show Path
+          </button>
           <button
             type="submit"
             class="border-2 border-black p-1 rounded bg-gray-50"
@@ -80,6 +90,7 @@
     >
       Show Tables
     </button>
+    {{ block "page-tables" .}}
     <div id="page-tables" class="w-full h-screen mt-3 flex">
       {{block "pml4" .}}
       <div id="pml4"></div>
@@ -91,5 +102,6 @@
       <div id="pte"></div>
       {{end}}
     </div>
+    {{end}}
   </body>
 </html>

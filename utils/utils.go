@@ -43,28 +43,29 @@ type Entry struct {
 }
 
 type PTEntry struct {
-	P    bool   // present
-	W    bool   // writable
-	U    bool   // userspace addressable
-	Wt   bool   // write through
-	Dc   bool   // disabled cache
-	A    bool   // accessed
-	D    bool   // dirty
-	H    bool   // huge page
-	Pat  bool   // PAT (2MB or 4MB)
-	G    bool   // global TLB entry
-	S1   bool   // software 1
-	S2   bool   // software 2
-	S3   bool   // software 3
-	PatL bool   // huge page (1GB or 2MB)
-	Pfn  string // Page Frame Number
-	Vfn  string
-	S4   bool // software 4
-	Kp0  bool // key protection 0
-	Kp1  bool // key protection 1
-	Kp2  bool // key protection 2
-	Kp3  bool // key protection 3
-	Nx   bool // no Execute
+	Color string
+	P     bool   // present
+	W     bool   // writable
+	U     bool   // userspace addressable
+	Wt    bool   // write through
+	Dc    bool   // disabled cache
+	A     bool   // accessed
+	D     bool   // dirty
+	H     bool   // huge page
+	Pat   bool   // PAT (2MB or 4MB)
+	G     bool   // global TLB entry
+	S1    bool   // software 1
+	S2    bool   // software 2
+	S3    bool   // software 3
+	PatL  bool   // huge page (1GB or 2MB)
+	Pfn   string // Page Frame Number
+	Vfn   string
+	S4    bool // software 4
+	Kp0   bool // key protection 0
+	Kp1   bool // key protection 1
+	Kp2   bool // key protection 2
+	Kp3   bool // key protection 3
+	Nx    bool // no Execute
 }
 
 func Virt2Phys(virtAddr string, pid uint64) string {
@@ -162,6 +163,11 @@ func ParsePTEntry(entry uint64, vaddr uint64) PTEntry {
 	}
 	e.Pfn = fmt.Sprintf("0x%x", (entry>>12)&uint64((uint64(1)<<40)-1))
 	e.Vfn = fmt.Sprintf("0x%x", (vaddr))
+	if e.P {
+		e.Color = "green"
+	} else {
+		e.Color = "red"
+	}
 	return e
 }
 
