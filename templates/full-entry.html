@@ -1,12 +1,31 @@
 {{define "full-entry"}}
 <div
   id="full-entry"
-  class="bg-blue-400 row-start-1 col-start-2 text-center content-center mx-2 rounded p-2"
+  class="bg-blue-400 row-start-1 row-end-3 col-start-2 text-center mx-2 rounded p-2"
 >
-  <table class="table-auto w-full border-separate border border-black">
-    <thead
-      class="z-10 w-full sticky top-0 border uppercase bg-white text-center text-xs"
-    >
+  {{if .readView}}
+  <button
+    hx-post="/full-entry"
+    hx-vals='{"vfn": "{{.entry.Vfn}}"}'
+    hx-swap="outerHTML"
+    hx-target="#full-entry"
+    class="border-2 border-black p-1 rounded bg-gray-50 m-2"
+  >
+    Edit
+  </button>
+  {{else}}
+  <button
+    hx-post="/full-entry"
+    hx-vals='{"vfn": "{{.entry.Vfn}}", "read": true}'
+    hx-target="#full-entry"
+    hx-swap="outerHTML"
+    class="border-2 border-black p-1 rounded bg-gray-50 m-2"
+  >
+    Cancel
+  </button>
+  {{end}}
+  <table class="w-full border-separate border border-black">
+    <thead class="z-10 w-full border uppercase bg-white text-center text-xs">
       <th class="border-2 border-gray-300">NX</th>
       <th class="border-2 border-gray-300">PFN</th>
       <th class="border-2 border-gray-300">VFN</th>
@@ -24,53 +43,169 @@
       <th class="border-2 border-gray-300">W</th>
       <th class="border-2 border-gray-300">P</th>
     </thead>
-    <tbody class="w-full text-center text-xs"></tbody>
-    <tr class="bg-green-200">
-      <td class="border-2 border-gray-300">
-        {{if .entry.Nx}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">{{.entry.Pfn}}</td>
-      <td class="border-2 border-gray-300">{{.entry.Vfn}}</td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.PatL}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.S1}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.S2}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.S3}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.G}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.Pat}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.D}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.A}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.Dc}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.Wt}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.U}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.W}} 1 {{else}} 0 {{end}}
-      </td>
-      <td class="border-2 border-gray-300">
-        {{if .entry.P}} 1 {{else}} 0 {{end}}
-      </td>
-    </tr>
+    {{ if .readView}}
+    <tbody class="w-full text-center text-s">
+      <tr class="bg-{{.entry.Color}}-200">
+        <td class="border-2 border-gray-300">
+          {{if .entry.Nx}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.Pfn}} {{.entry.Pfn}} {{else}} 0x0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.Vfn}}{{.entry.Vfn}} {{else}} 0x0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.PatL}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.S1}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.S2}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.S3}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.G}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.Pat}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.D}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.A}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.Dc}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.Wt}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.U}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.W}} 1 {{else}} 0 {{end}}
+        </td>
+        <td class="border-2 border-gray-300">
+          {{if .entry.P}} 1 {{else}} 0 {{end}}
+        </td>
+      </tr>
+    </tbody>
+    {{else}}
+    <tbody class="w-full text-center text-s">
+      <form id="patch">
+        <tr class="bg-{{.entry.Color}}-200">
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.Nx}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.Pfn}} {{.entry.Pfn}} {{else}} 0x0 {{end}}"
+              class="w-full min-w-16 text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.Vfn}}{{.entry.Vfn}} {{else}} 0x0 {{end}}"
+              class="w-full min-w-28 text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.PatL}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.S1}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.S2}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.S3}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.G}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.Pat}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.D}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.A}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.Dc}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.Wt}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.U}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.W}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+          <td class="border-2 border-gray-300">
+            <input
+              value="{{if .entry.P}} 1 {{else}} 0 {{end}}"
+              class="w-full text-center"
+            />
+          </td>
+        </tr>
+      </form>
+    </tbody>
+    <button
+      type="submit"
+      class="border-2 border-black p-1 rounded bg-gray-50 m-2"
+    >
+      Save
+    </button>
+    {{ end }}
   </table>
 </div>
 {{end}}

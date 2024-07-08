@@ -63,6 +63,7 @@
             hx-post="/translate"
             hx-target="#phys"
             hx-swap="innerHTML"
+            hx-trigger="click,click from:#path"
           >
             Translate
           </button>
@@ -74,7 +75,7 @@
       {{block "full-entry" .}}
       <div
         id="full-entry"
-        class="bg-blue-400 row-start-1 col-start-2 text-center content-center rounded mx-2"
+        class="bg-blue-400 row-start-1 row-end-3 col-start-2 text-center content-center rounded mx-2"
       >
         Click on entry to display full entry here
       </div>

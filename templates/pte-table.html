@@ -25,7 +25,7 @@
       <tr
         class="bg-{{$entry.Color}}-200"
         hx-post="/full-entry"
-        hx-vals='{"pfn": "{{$entry.Pfn}}"}'
+        hx-vals='{"vfn": "{{$entry.Vfn}}", "read": true}'
         hx-swap="outerHTML"
         hx-target="#full-entry"
       >
@@ -53,7 +53,7 @@
       <tr
         class="bg-{{$entry.Color}}-200"
         hx-post="/full-entry"
-        hx-vals='{"pfn": "{{$entry.Pfn}}"}'
+        hx-vals='{"vfn": "{{$entry.Vfn}}"}'
         hx-swap="outerHTML"
         hx-target="#full-entry"
       >

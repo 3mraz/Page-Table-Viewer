@@ -177,8 +177,8 @@ func GetFirstLvl(pid uint64) []PTEntry {
 	defer C.free(unsafe.Pointer(entries))
 	length := int(C.FIRST_LEVEL_ENTRIES)
 	goEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(entries))[:length:length]
-	for i, v := range goEntries {
-		if goEntries[i].entry != 0 {
+	for _, v := range goEntries {
+		if v.entry != 0 {
 			ptEntries = append(ptEntries, ParsePTEntry(uint64(v.entry), uint64(v.vaddr)))
 		}
 	}
