@@ -3,7 +3,6 @@ node_modules/
 notes.md
 tmp/
 src/libPTEdit.a
-src/demos/
 src/module/.Module.symvers.cmd
 src/module/.modules.order.cmd
 src/module/.pteditor.ko.cmd
