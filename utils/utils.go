@@ -11,10 +11,34 @@ import (
 	"encoding/binary"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"unsafe"
 )
+
+func ValidVirt(virtAddr string) bool {
+	re := regexp.MustCompile("^0x[0-9a-fA-F]{2,12}$")
+	return re.MatchString(virtAddr)
+}
+
+func ValidPhys(physAddr string) bool {
+	re := regexp.MustCompile("^0x[0-9a-fA-F]{1,6}$")
+	return re.MatchString(physAddr) && physAddr != "0x0"
+}
+
+func replacePfn(pte, pfn uint64) uint64 {
+	// Mask to clear the PFN bits (assuming PFN is in bits 12 through 51)
+	const pfnMask uint64 = 0x000FFFFFFFFFF000
+
+	// Clear the PFN bits in the PTE
+	pte &= ^pfnMask
+
+	// Insert the new PFN into the PTE (shifted into the correct position)
+	pte |= (pfn << 12) & pfnMask
+
+	return pte
+}
 
 func InitEntry(cEntry C.ptedit_entry_t) Entry {
 	var entry Entry
@@ -240,4 +264,116 @@ func PrintStruct(ptEntry PTEntry) {
 
 func numOfEntriesPerLvl() int {
 	return int(C.num_entries_per_lvl())
+}
+
+func UpdateEntry(entryValues map[string]interface{}, pid uint64) (PTEntry, error) {
+	pfn, ok := entryValues["pfn"].(string)
+	if !ok {
+		return PTEntry{}, fmt.Errorf("pfn is of the wrong type")
+	}
+	vfn, ok := entryValues["vfn"].(string)
+	if !ok {
+		return PTEntry{}, fmt.Errorf("vfn is of the wrong type")
+	}
+	vfn, found := strings.CutPrefix(vfn, "0x")
+	if !found {
+		return PTEntry{}, fmt.Errorf("Virt. address doesn't have a prefix")
+	}
+	vfn_int, err := strconv.ParseUint(vfn, 16, 64)
+	if err != nil {
+		return PTEntry{}, fmt.Errorf("Couln't parse virt. address to unsiged int")
+	}
+	vfn_ptr := uintptr(vfn_int)
+	cEntry := C.ptedit_resolve_kernel(unsafe.Pointer(vfn_ptr), C.int(pid))
+	entry := uint64(cEntry.pte)
+	e := ParsePTEntry(entry, vfn_int)
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PRESENT)) != entryValues["p"] {
+		e.P = !e.P
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_PRESENT))
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_RW)) != entryValues["w"] {
+		e.W = !e.W
+		fmt.Println(entry)
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_RW))
+		fmt.Println(entry)
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_USER)) != entryValues["u"] {
+		e.U = !e.U
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_USER))
+		fmt.Println("Helo1")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PWT)) != entryValues["wt"] {
+		e.Wt = !e.Wt
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_PWT))
+		fmt.Println("Helo2")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PCD)) != entryValues["dc"] {
+		e.Dc = !e.Dc
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_PCD))
+		fmt.Println("Helo3")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_ACCESSED)) != entryValues["a"] {
+		e.A = !e.A
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_ACCESSED))
+		fmt.Println("Helo4")
+	}
+	// FIX: entry changes it's value. Print after each if statement to konw where is it changing
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_DIRTY)) != entryValues["d"] {
+		e.D = !e.D
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_DIRTY))
+		fmt.Println("Helo5")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PSE)) != entryValues["pat"] {
+		e.Pat = !e.Pat
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_PSE))
+		fmt.Println("Helo6")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_GLOBAL)) != entryValues["g"] {
+		e.G = !e.G
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_GLOBAL))
+		fmt.Println("Helo7")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_SOFTW1)) != entryValues["s1"] {
+		e.S1 = !e.S1
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_SOFTW1))
+		fmt.Println("Helo8")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_SOFTW2)) != entryValues["s2"] {
+		e.S2 = !e.S2
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_SOFTW2))
+		fmt.Println("Helo9")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_SOFTW3)) != entryValues["s3"] {
+		e.S3 = !e.S3
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_SOFTW3))
+		fmt.Println("Helo10")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PAT_LARGE)) != entryValues["patl"] {
+		e.PatL = !e.PatL
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_PAT_LARGE))
+		fmt.Println("Helo11")
+	}
+	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_NX)) != entryValues["nx"] {
+		e.Nx = !e.Nx
+		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_NX))
+		fmt.Println("Helo12")
+	}
+	if e.Pfn != pfn {
+		fmt.Println("Helo13")
+		pfn, found := strings.CutPrefix(pfn, "0x")
+		if !found {
+			return PTEntry{}, fmt.Errorf("Virt. address doesn't have a prefix")
+		}
+		pfn_int, err := strconv.ParseUint(pfn, 10, 64)
+		if err != nil {
+			return PTEntry{}, fmt.Errorf("Couln't parse virt. address to unsiged int")
+		}
+		e.Pfn = pfn
+		entry = replacePfn(entry, pfn_int)
+	}
+	e.Color = "green"
+	cEntry.pte = C.size_t(entry)
+	C.ptedit_update_kernel(unsafe.Pointer(vfn_ptr), C.int(pid), &cEntry)
+	C.ptedit_invalidate_tlb(unsafe.Pointer(vfn_ptr))
+	return e, nil
 }

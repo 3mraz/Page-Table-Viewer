@@ -27,6 +27,7 @@ func main() {
 	http.HandleFunc("/full-entry", handlers.FullEntryHandler)
 	http.HandleFunc("/only-present", handlers.GeneralHandler)
 	http.HandleFunc("/show-path", handlers.ShowPathHandler)
+	http.HandleFunc("/save-entry", handlers.SaveEntryHandler)
 
 	log.Fatal(http.ListenAndServe(":8000", nil))
 

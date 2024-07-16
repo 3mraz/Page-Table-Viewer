@@ -1,211 +1,239 @@
-{{define "full-entry"}}
+{{define "full-entry"}} {{$p := 0}} {{$w := 0}} {{$wt := 0}} {{$u := 0}} {{$a :=
+0}} {{$d := 0}} {{$g := 0}} {{$nx := 0}} {{$pat := 0}} {{$patl := 0}} {{$s3 :=
+0}} {{$s2 := 0}} {{$s1 := 0}} {{$dc := 0}} {{if .entry.P}} {{$p = 1}} {{end}}
+{{if .entry.W}} {{$w = 1}} {{end}} {{if .entry.Wt}} {{$wt = 1}} {{end}} {{if
+.entry.U}} {{$u = 1}} {{end}} {{if .entry.A}} {{$a = 1}} {{end}} {{if .entry.D}}
+{{$d = 1}} {{end}} {{if .entry.G}} {{$g = 1}} {{end}} {{if .entry.Nx}} {{$nx =
+1}} {{end}} {{if .entry.Pat}} {{$pat = 1}} {{end}} {{if .entry.PatL}} {{$patl =
+1}} {{end}} {{if .entry.S3}} {{$s3 = 1}} {{end}} {{if .entry.S2}} {{$s2 = 1}}
+{{end}} {{if .entry.S1}} {{$s1 = 1}} {{end}} {{if .entry.Dc}} {{$dc = 1}}
+{{end}}
 <div
   id="full-entry"
-  class="bg-blue-400 row-start-1 row-end-3 col-start-2 text-center mx-2 rounded p-2"
+  class="bg-blue-400 row-start-1 row-end-3 col-start-2 text-center mx-2 rounded p-1 pb-2 flex justify-end items-end flex-col"
 >
-  {{if .readView}}
-  <button
-    hx-post="/full-entry"
-    hx-vals='{"vfn": "{{.entry.Vfn}}"}'
-    hx-swap="outerHTML"
-    hx-target="#full-entry"
-    class="border-2 border-black p-1 rounded bg-gray-50 m-2"
-  >
-    Edit
-  </button>
-  {{else}}
-  <button
-    hx-post="/full-entry"
-    hx-vals='{"vfn": "{{.entry.Vfn}}", "read": true}'
-    hx-target="#full-entry"
-    hx-swap="outerHTML"
-    class="border-2 border-black p-1 rounded bg-gray-50 m-2"
-  >
-    Cancel
-  </button>
+  {{if eq .tName "pte"}}
+  <div class="flex w-full m-0">
+    {{block "warning" .}}
+    <div class="w-3/4 m-1 mb-2 ml-2 font-bold text-left" id="warning">
+      {{range $i ,$e := .warnings}}
+      <li>{{$e}}</li>
+      {{end}}
+    </div>
+    {{end}}
+    <div class="w-1/4 m-1 mb-3">
+      {{if .readView}}
+      <button
+        hx-post="/full-entry"
+        hx-vals='{"vfn": "{{.entry.Vfn}}", "idx": "{{.idx}}", "tName": "{{.tName}}"}'
+        hx-swap="outerHTML"
+        hx-target="#full-entry"
+        class="border-2 border-black p-1 rounded bg-gray-50"
+      >
+        Edit
+      </button>
+      {{else}}
+      <button
+        hx-post="/full-entry"
+        hx-vals='{"vfn": "{{.entry.Vfn}}", "idx": "{{.idx}}", "tName": "{{.tName}}", "read": true}'
+        hx-target="#full-entry"
+        hx-swap="outerHTML"
+        class="border-2 border-black p-1 rounded bg-gray-50"
+        hx-trigger="click,htmx:afterOnLoad from:#save"
+      >
+        Cancel
+      </button>
+      <button
+        id="save"
+        class="border-2 border-black p-1 rounded bg-gray-50"
+        hx-post="/save-entry"
+        hx-vals='{"idx": "{{.idx}}", "tName": "{{.tName}}", "vfn": "{{.entry.Vfn}}"}'
+        hx-include="[name=nx],[name=pfn],[name=patl],[name=s1],[name=s2],[name=s3],[name=g],[name=pat],[name=d],[name=a],[name=dc],[name=wt],[name=u],[name=w],[name=p]"
+        type="submit"
+      >
+        Save
+      </button>
+      {{end}}
+    </div>
+  </div>
   {{end}}
-  <table class="w-full border-separate border border-black">
-    <thead class="z-10 w-full border uppercase bg-white text-center text-xs">
-      <th class="border-2 border-gray-300">NX</th>
-      <th class="border-2 border-gray-300">PFN</th>
-      <th class="border-2 border-gray-300">VFN</th>
-      <th class="border-2 border-gray-300">H</th>
-      <th class="border-2 border-gray-300">S1</th>
-      <th class="border-2 border-gray-300">S2</th>
-      <th class="border-2 border-gray-300">S3</th>
-      <th class="border-2 border-gray-300">G</th>
-      <th class="border-2 border-gray-300">S</th>
-      <th class="border-2 border-gray-300">D</th>
-      <th class="border-2 border-gray-300">A</th>
-      <th class="border-2 border-gray-300">UC</th>
-      <th class="border-2 border-gray-300">WT</th>
-      <th class="border-2 border-gray-300">U</th>
-      <th class="border-2 border-gray-300">W</th>
-      <th class="border-2 border-gray-300">P</th>
-    </thead>
-    {{ if .readView}}
-    <tbody class="w-full text-center text-s">
-      <tr class="bg-{{.entry.Color}}-200">
-        <td class="border-2 border-gray-300">
-          {{if .entry.Nx}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.Pfn}} {{.entry.Pfn}} {{else}} 0x0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.Vfn}}{{.entry.Vfn}} {{else}} 0x0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.PatL}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.S1}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.S2}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.S3}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.G}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.Pat}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.D}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.A}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.Dc}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.Wt}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.U}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.W}} 1 {{else}} 0 {{end}}
-        </td>
-        <td class="border-2 border-gray-300">
-          {{if .entry.P}} 1 {{else}} 0 {{end}}
-        </td>
-      </tr>
-    </tbody>
-    {{else}}
-    <tbody class="w-full text-center text-s">
-      <form id="patch">
-        <tr class="bg-{{.entry.Color}}-200">
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.Nx}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.Pfn}} {{.entry.Pfn}} {{else}} 0x0 {{end}}"
-              class="w-full min-w-16 text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.Vfn}}{{.entry.Vfn}} {{else}} 0x0 {{end}}"
-              class="w-full min-w-28 text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.PatL}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.S1}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.S2}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.S3}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.G}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.Pat}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.D}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.A}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.Dc}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.Wt}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.U}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.W}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-          <td class="border-2 border-gray-300">
-            <input
-              value="{{if .entry.P}} 1 {{else}} 0 {{end}}"
-              class="w-full text-center"
-            />
-          </td>
-        </tr>
-      </form>
-    </tbody>
-    <button
-      type="submit"
-      class="border-2 border-black p-1 rounded bg-gray-50 m-2"
-    >
-      Save
-    </button>
-    {{ end }}
-  </table>
+  <div class="w-full self-end justify-end">
+    {{if not .readView}}
+    <form>
+      {{end}}
+      <table class="w-full border-separate border">
+        <thead
+          class="z-10 w-full border uppercase bg-white text-center text-xs"
+        >
+          <th class="border-2 border-gray-300">NX</th>
+          <th class="border-2 border-gray-300">PFN</th>
+          <th class="border-2 border-gray-300">VFN</th>
+          <th class="border-2 border-gray-300">H</th>
+          <th class="border-2 border-gray-300">S1</th>
+          <th class="border-2 border-gray-300">S2</th>
+          <th class="border-2 border-gray-300">S3</th>
+          <th class="border-2 border-gray-300">G</th>
+          <th class="border-2 border-gray-300">S</th>
+          <th class="border-2 border-gray-300">D</th>
+          <th class="border-2 border-gray-300">A</th>
+          <th class="border-2 border-gray-300">UC</th>
+          <th class="border-2 border-gray-300">WT</th>
+          <th class="border-2 border-gray-300">U</th>
+          <th class="border-2 border-gray-300">W</th>
+          <th class="border-2 border-gray-300">P</th>
+        </thead>
+        {{ if .readView}}
+        <tbody class="w-full text-center text-s">
+          <tr class="bg-{{.entry.Color}}-200">
+            <td class="border-2 border-gray-300">{{$nx}}</td>
+            <td class="border-2 border-gray-300">{{.entry.Pfn}}</td>
+            <td class="border-2 border-gray-300">{{.entry.Vfn}}</td>
+            <td class="border-2 border-gray-300">{{$patl}}</td>
+            <td class="border-2 border-gray-300">{{$s1}}</td>
+            <td class="border-2 border-gray-300">{{$s2}}</td>
+            <td class="border-2 border-gray-300">{{$s3}}</td>
+            <td class="border-2 border-gray-300">{{$g}}</td>
+            <td class="border-2 border-gray-300">{{$pat}}</td>
+            <td class="border-2 border-gray-300">{{$d}}</td>
+            <td class="border-2 border-gray-300">{{$a}}</td>
+            <td class="border-2 border-gray-300">{{$dc}}</td>
+            <td class="border-2 border-gray-300">{{$wt}}</td>
+            <td class="border-2 border-gray-300">{{$u}}</td>
+            <td class="border-2 border-gray-300">{{$w}}</td>
+            <td class="border-2 border-gray-300">{{$p}}</td>
+          </tr>
+        </tbody>
+        {{else}}
+        <tbody class="w-full text-center text-s">
+          <tr class="bg-{{.entry.Color}}-200">
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$nx}}"
+                class="w-full text-center"
+                name="nx"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{.entry.Pfn}}"
+                class="w-full min-w-16 text-center"
+                name="pfn"
+              />
+            </td>
+            <td class="border-2 border-gray-300">{{.entry.Vfn}}</td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$patl}}"
+                class="w-full text-center"
+                name="patl"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$s1}}"
+                class="w-full text-center"
+                name="s1"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$s2}}"
+                class="w-full text-center"
+                name="s2"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$s3}}"
+                class="w-full text-center"
+                name="s3"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$g}}"
+                class="w-full text-center"
+                name="g"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$pat}}"
+                class="w-full text-center"
+                name="pat"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$d}}"
+                class="w-full text-center"
+                name="d"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$a}}"
+                class="w-full text-center"
+                name="a"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$dc}}"
+                class="w-full text-center"
+                name="dc"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$wt}}"
+                class="w-full text-center"
+                name="wt"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$u}}"
+                class="w-full text-center"
+                name="u"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$w}}"
+                class="w-full text-center"
+                name="w"
+              />
+            </td>
+            <td class="border-2 border-gray-300">
+              <input
+                required
+                value="{{$p}}"
+                class="w-full text-center"
+                name="p"
+              />
+            </td>
+          </tr>
+        </tbody>
+        {{ end }}
+      </table>
+      {{if not .readView}}
+    </form>
+    {{end}}
+  </div>
+  {{end}}
 </div>
-{{end}}

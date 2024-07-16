@@ -11,7 +11,7 @@
       <th class="border border-gray-300">PFN</th>
       <th class="border border-gray-300">VFN</th>
       <th
-        class="border border-gray-300 {{if .onlyPresent }} bg-green-300 {{else}} bg-red-300 {{end}}"
+        class="border border-gray-300 {{if .onlyPresent }} bg-green-300 {{else}} bg-red-300 {{end}} cursor-pointer"
         hx-post="/table"
         hx-target="#{{.tmplName}}"
         hx-swap="outerHTML"
@@ -25,7 +25,7 @@
       <tr
         class="bg-{{$entry.Color}}-200"
         hx-post="/full-entry"
-        hx-vals='{"vfn": "{{$entry.Vfn}}", "read": true}'
+        hx-vals='{"vfn": "{{$entry.Vfn}}", "read": true, "tName": "{{$.tmplName}}", "idx": {{$i}}}'
         hx-swap="outerHTML"
         hx-target="#full-entry"
       >
@@ -53,7 +53,7 @@
       <tr
         class="bg-{{$entry.Color}}-200"
         hx-post="/full-entry"
-        hx-vals='{"vfn": "{{$entry.Vfn}}"}'
+        hx-vals='{"vfn": "{{$entry.Vfn}}", "read": true, "tName": "{{$.tmplName}}", "idx": {{$i}}}'
         hx-swap="outerHTML"
         hx-target="#full-entry"
       >

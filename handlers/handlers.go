@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"regexp"
 	"strconv"
+	"strings"
+	// "unsafe"
 )
 
 var (
@@ -16,12 +17,12 @@ var (
 	pdpti             int64                               = -1
 	pdi               int64                               = -1
 	ptei              int64                               = -1
-	ALL_ENTRIES                                           = make(map[string]utils.PTEntry)
 	only_present_pml4 bool                                = false
 	only_present_pdpt bool                                = false
 	only_present_pd   bool                                = false
 	only_present_pte  bool                                = false
 	cstate            map[string]map[uint16]utils.PTEntry = make(map[string]map[uint16]utils.PTEntry)
+	warnings          []string
 )
 
 func reset_env() {
@@ -30,7 +31,6 @@ func reset_env() {
 	pdpti = -1
 	pdi = -1
 	ptei = -1
-	ALL_ENTRIES = make(map[string]utils.PTEntry)
 	only_present_pml4 = false
 	only_present_pdpt = false
 	only_present_pd = false
@@ -60,7 +60,6 @@ func getEntries(lvl uint64, present string, tmplName string, numEntries uint16) 
 			for i := uint16(0); i < numEntries; i++ {
 				vfn := _calc_vfn(lvl, int64(i))
 				if vfn == entry.Vfn {
-					ALL_ENTRIES[entry.Vfn] = entry
 					vAddrs[i] = entry
 					if index != 0 {
 						break
@@ -76,21 +75,19 @@ func getEntries(lvl uint64, present string, tmplName string, numEntries uint16) 
 	}
 }
 
-func validVirt(virtAddr string) bool {
-	re := regexp.MustCompile("^0x[0-9a-fA-F]{0,12}$")
-	return re.MatchString(virtAddr)
-}
-
 func parseVirt(virtAddr string) (pml4i int64, pdpti int64, pdi int64, ptei int64, err error) {
-	virtNum, err := strconv.ParseUint(virtAddr[2:], 16, 64)
-	if err != nil {
-		return -1, -1, -1, -1, fmt.Errorf("Couldn't parse virtAddr")
+	if strings.HasPrefix(virtAddr, "0x") {
+		virtNum, err := strconv.ParseUint(virtAddr[2:], 16, 64)
+		if err != nil {
+			return -1, -1, -1, -1, fmt.Errorf("Couldn't parse virtAddr")
+		}
+		var pml4Idx int64 = int64(virtNum & (0x1ff << 39) >> 39)
+		var pdptIdx int64 = int64(virtNum & (0x1ff << 30) >> 30)
+		var pdIdx int64 = int64(virtNum & (0x1ff << 21) >> 21)
+		var pteIdx int64 = int64(virtNum & (0x1ff << 12) >> 12)
+		return pml4Idx, pdptIdx, pdIdx, pteIdx, nil
 	}
-	var pml4Idx int64 = int64(virtNum & (0x1ff << 39) >> 39)
-	var pdptIdx int64 = int64(virtNum & (0x1ff << 30) >> 30)
-	var pdIdx int64 = int64(virtNum & (0x1ff << 21) >> 21)
-	var pteIdx int64 = int64(virtNum & (0x1ff << 12) >> 12)
-	return pml4Idx, pdptIdx, pdIdx, pteIdx, nil
+	return -1, -1, -1, -1, fmt.Errorf("Couldn't parse virtAddr")
 }
 
 func _calc_vfn(lvl uint64, idx int64) string {
@@ -191,7 +188,6 @@ func PidHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if pid != pId {
 		pid = pId
-		ALL_ENTRIES = make(map[string]utils.PTEntry)
 	}
 
 	pidHTML := fmt.Sprintf("<label id='pid' for='virt'><b>Process Id:</b> %d</label>", pid)
@@ -205,7 +201,7 @@ func PidHandler(w http.ResponseWriter, r *http.Request) {
 func Virt2PhysHandler(w http.ResponseWriter, r *http.Request) {
 	virtAddr := r.PostFormValue("virt")
 	phys := ""
-	if !(validVirt(virtAddr)) {
+	if !(utils.ValidVirt(virtAddr)) {
 		phys = "Invalid Syntax"
 	} else {
 		phys = utils.Virt2Phys(virtAddr, pid)
@@ -220,6 +216,23 @@ func Virt2PhysHandler(w http.ResponseWriter, r *http.Request) {
 
 func ShowPathHandler(w http.ResponseWriter, r *http.Request) {
 	virt := r.PostFormValue("virt")
+	if !utils.ValidVirt(virt) {
+		tmpl := template.New("page-tables")
+		tmpl.Parse(`
+    <div id="page-tables" class="w-full h-screen mt-3 flex">
+      {{block "pml4" .}}
+      <div id="pml4"></div>
+      {{end}} {{block "pdpt" .}}
+      <div id="pdpt"></div>
+      {{end}} {{block "pd" .}}
+      <div id="pd"></div>
+      {{end}} {{block "pte" .}}
+      <div id="pte"></div>
+      {{end}}
+    </div>`)
+		tmpl.ExecuteTemplate(w, "page-tables", nil)
+		return
+	}
 	pml4Idx, pdptIdx, pdIdx, pteIdx, err := parseVirt(virt)
 	if err != nil {
 		fmt.Println(err)
@@ -336,15 +349,89 @@ func FullEntryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	entryVfn := r.PostFormValue("vfn")
+	tableName := r.PostFormValue("tName")
+	idx, err := strconv.ParseUint(r.PostFormValue("idx"), 10, 16)
 	readView := r.PostFormValue("read")
-	context := make(map[string]interface{})
-	e, ok := ALL_ENTRIES[entryVfn]
+	var e utils.PTEntry
+	var ok bool
+	if err != nil {
+		http.Error(w, "Couldn't parse index of full entry", http.StatusBadRequest)
+		ok = false
+		e = utils.PTEntry{}
+	} else {
+		e, ok = cstate[tableName][uint16(idx)]
+	}
 	if !ok {
 		e = utils.PTEntry{Vfn: entryVfn, Pfn: "0x0", Color: "red"}
 	}
+
+	context := make(map[string]interface{})
 	context["entry"] = e
 	context["readView"] = readView
-	fmt.Println(context["readView"])
+	context["idx"] = idx
+	context["tName"] = tableName
+	context["warnings"] = warnings
 	tmpl := template.Must(template.ParseFiles("templates/full-entry.html"))
 	tmpl.ExecuteTemplate(w, "full-entry", context)
+}
+
+func SaveEntryHandler(wr http.ResponseWriter, r *http.Request) {
+	warnings = make([]string, 0)
+	p, _ := strconv.ParseUint(r.PostFormValue("p"), 10, 64)
+	if p != 1 {
+		warnings = append(warnings, "Cannot edit a non-present entry.")
+		warnings = append(warnings, "You may want to set the entry to present.")
+		return
+	}
+	pfn := r.PostFormValue("pfn")
+	if !utils.ValidPhys(pfn) {
+		warnings = append(warnings, "The PFN you entered is not valid.")
+		return
+	}
+	nx, _ := strconv.ParseUint(r.PostFormValue("nx"), 10, 64)
+	pat, _ := strconv.ParseUint(r.PostFormValue("pat"), 10, 64)
+	patl, _ := strconv.ParseUint(r.PostFormValue("patl"), 10, 64)
+	s1, _ := strconv.ParseUint(r.PostFormValue("s1"), 10, 64)
+	s2, _ := strconv.ParseUint(r.PostFormValue("s2"), 10, 64)
+	s3, _ := strconv.ParseUint(r.PostFormValue("s3"), 10, 64)
+	u, _ := strconv.ParseUint(r.PostFormValue("u"), 10, 64)
+	dc, _ := strconv.ParseUint(r.PostFormValue("dc"), 10, 64)
+	d, _ := strconv.ParseUint(r.PostFormValue("d"), 10, 64)
+	a, _ := strconv.ParseUint(r.PostFormValue("a"), 10, 64)
+	w, _ := strconv.ParseUint(r.PostFormValue("w"), 10, 64)
+	wt, _ := strconv.ParseUint(r.PostFormValue("wt"), 10, 64)
+	g, _ := strconv.ParseUint(r.PostFormValue("g"), 10, 64)
+	vfn := r.PostFormValue("vfn")
+	tableName := r.PostFormValue("tName")
+
+	eValues := make(map[string]interface{})
+	eValues["p"] = p
+	eValues["pfn"] = pfn
+	eValues["vfn"] = vfn
+	eValues["nx"] = nx
+	eValues["pat"] = pat
+	eValues["patl"] = patl
+	eValues["s1"] = s1
+	eValues["s2"] = s2
+	eValues["s3"] = s3
+	eValues["u"] = u
+	eValues["dc"] = dc
+	eValues["d"] = d
+	eValues["a"] = a
+	eValues["w"] = w
+	eValues["wt"] = wt
+	eValues["g"] = g
+	e, err := utils.UpdateEntry(eValues, pid)
+	if err != nil {
+		http.Error(wr, "Failed to update the entry", http.StatusBadRequest)
+		return
+	}
+
+	idx, err := strconv.ParseUint(r.PostFormValue("idx"), 10, 16)
+	if err != nil {
+		http.Error(wr, "Couldn't parse index in save entry", http.StatusBadRequest)
+		return
+	}
+
+	cstate[tableName][uint16(idx)] = e
 }
