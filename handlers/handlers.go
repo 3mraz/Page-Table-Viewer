@@ -376,31 +376,30 @@ func FullEntryHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SaveEntryHandler(wr http.ResponseWriter, r *http.Request) {
+	var nx, p, patl, pat, s1, s2, s3, d, dc, u, a, w, wt, g uint64
+	pfn := "0x0"
 	warnings = make([]string, 0)
-	p, _ := strconv.ParseUint(r.PostFormValue("p"), 10, 64)
-	if p != 1 {
-		warnings = append(warnings, "Cannot edit a non-present entry.")
-		warnings = append(warnings, "You may want to set the entry to present.")
-		return
+	p, _ = strconv.ParseUint(r.PostFormValue("p"), 10, 64)
+	if p == 1 {
+		nx, _ = strconv.ParseUint(r.PostFormValue("nx"), 10, 64)
+		pat, _ = strconv.ParseUint(r.PostFormValue("pat"), 10, 64)
+		patl, _ = strconv.ParseUint(r.PostFormValue("patl"), 10, 64)
+		s1, _ = strconv.ParseUint(r.PostFormValue("s1"), 10, 64)
+		s2, _ = strconv.ParseUint(r.PostFormValue("s2"), 10, 64)
+		s3, _ = strconv.ParseUint(r.PostFormValue("s3"), 10, 64)
+		u, _ = strconv.ParseUint(r.PostFormValue("u"), 10, 64)
+		dc, _ = strconv.ParseUint(r.PostFormValue("dc"), 10, 64)
+		d, _ = strconv.ParseUint(r.PostFormValue("d"), 10, 64)
+		a, _ = strconv.ParseUint(r.PostFormValue("a"), 10, 64)
+		w, _ = strconv.ParseUint(r.PostFormValue("w"), 10, 64)
+		wt, _ = strconv.ParseUint(r.PostFormValue("wt"), 10, 64)
+		g, _ = strconv.ParseUint(r.PostFormValue("g"), 10, 64)
+		pfn = r.PostFormValue("pfn")
 	}
-	pfn := r.PostFormValue("pfn")
 	if !utils.ValidPhys(pfn) {
 		warnings = append(warnings, "The PFN you entered is not valid.")
 		return
 	}
-	nx, _ := strconv.ParseUint(r.PostFormValue("nx"), 10, 64)
-	pat, _ := strconv.ParseUint(r.PostFormValue("pat"), 10, 64)
-	patl, _ := strconv.ParseUint(r.PostFormValue("patl"), 10, 64)
-	s1, _ := strconv.ParseUint(r.PostFormValue("s1"), 10, 64)
-	s2, _ := strconv.ParseUint(r.PostFormValue("s2"), 10, 64)
-	s3, _ := strconv.ParseUint(r.PostFormValue("s3"), 10, 64)
-	u, _ := strconv.ParseUint(r.PostFormValue("u"), 10, 64)
-	dc, _ := strconv.ParseUint(r.PostFormValue("dc"), 10, 64)
-	d, _ := strconv.ParseUint(r.PostFormValue("d"), 10, 64)
-	a, _ := strconv.ParseUint(r.PostFormValue("a"), 10, 64)
-	w, _ := strconv.ParseUint(r.PostFormValue("w"), 10, 64)
-	wt, _ := strconv.ParseUint(r.PostFormValue("wt"), 10, 64)
-	g, _ := strconv.ParseUint(r.PostFormValue("g"), 10, 64)
 	vfn := r.PostFormValue("vfn")
 	tableName := r.PostFormValue("tName")
 
