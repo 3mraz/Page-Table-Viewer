@@ -1,8 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
-
-#include "../src/ptedit_header.h"
+#include <unistd.h>
 
 #define NOP16                                                                  \
   asm volatile("nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nn" \

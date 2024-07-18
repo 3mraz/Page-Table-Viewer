@@ -1,4 +1,3 @@
-
 SRC=$(wildcard *.c)
 BIN=$(SRC:.c=)
 

@@ -5,7 +5,7 @@ AR = ar
 ARFLAGS = rcs
 
 
-BINS = header pteditor ptedit.o libPTEdit.a demos
+BINS = header pteditor ptedit.o libPTEdit.a demos tester
 
 all: $(BINS) 
 
@@ -23,7 +23,7 @@ libPTEdit.a: ptedit.o
 demos: header pteditor
 	cd demos && make
 
-tester: 
+tester: header pteditor
 	cd tester && make
 
 deb:
