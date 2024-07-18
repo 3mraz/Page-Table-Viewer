@@ -23,12 +23,16 @@ libPTEdit.a: ptedit.o
 demos: header pteditor
 	cd demos && make
 
+tester: 
+	cd tester && make
+
 deb:
 	dpkg-buildpackage
 
 clean:
 	cd module && make clean
 	cd demos && make clean
+	cd tester && make clean
 	rm -f *.a
 
 

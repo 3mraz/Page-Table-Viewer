@@ -1,4 +1,3 @@
-#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,10 +48,15 @@ int main(int argc, char *argv[]) {
     ptedit_cleanup();
     return 1;
   }
-
   printf("Virtual address: %p\n", virt_addr);
 
+  ptedit_entry_t vm = ptedit_resolve(virt_addr, pid);
+  ptedit_print_entry(vm.pte);
+
   ptedit_pte_clear_bit(virt_addr, pid, PTEDIT_PAGE_BIT_RW);
+
+  vm = ptedit_resolve(virt_addr, pid);
+  ptedit_print_entry(vm.pte);
   ptedit_cleanup();
   return 0;
 }
