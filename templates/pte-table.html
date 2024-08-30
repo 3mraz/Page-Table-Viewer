@@ -5,7 +5,7 @@
 >
   <table class="table-auto w-full border-separate">
     <thead
-      class="z-10 w-full sticky top-0 border uppercase bg-white text-center text-xs"
+      class="w-full sticky top-0 border uppercase bg-white text-center text-xs"
     >
       <th class="border border-gray-300">IDX</th>
       <th class="border border-gray-300">PFN</th>
@@ -33,16 +33,23 @@
         <td class="border border-gray-300">{{$entry.Pfn}}</td>
         <td class="border border-gray-300">{{$entry.Vfn}}</td>
         <td class="border border-gray-300">
-          {{if $entry.P }}1 {{else}} 0{{end}}
+          {{if $entry.P }} 1 {{else}} 0 {{end}}
         </td>
         <td class="border border-gray-300">
           {{if $entry.P}}
           <button
-            class="border border-black p-1 rounded bg-gray-50 text-sm z-50"
+            class="border border-black p-1 rounded bg-gray-50 text-sm"
+            {{if eq $.nxtLvlName "phys"}}
+            hx-post="/show-phys-page"
+            hx-vals='{"idx": "{{$i}}", "pfn": "{{$entry.Pfn}}", "vfn": "{{$entry.Vfn}}"}'
+            hx-swap="outerHTML"
+            hx-target="#modal"
+            {{else}}
             hx-post="/table"
-            hx-vals='{"idx": {{$i}}, "lvl": {{$.lvl}}}'
+            hx-vals='{"idx": "{{$i}}", "lvl": "{{$.lvl}}"}'
             hx-swap="outerHTML"
             hx-target="#{{$.nxtLvlName}}"
+            {{end}}
           >
             &rarr;
           </button>
@@ -63,11 +70,18 @@
         <td class="border border-gray-300">1</td>
         <td class="border border-gray-300">
           <button
-            class="border border-black p-1 rounded bg-gray-50 text-sm z-50"
+            class="border border-black p-1 rounded bg-gray-50 text-sm"
+            {{if eq $.nxtLvlName "phys"}}
+            hx-post="/show-phys-page"
+            hx-vals='{"idx": "{{$i}}", "pfn": "{{$entry.Pfn}}", "vfn": "{{$entry.Vfn}}"}'
+            hx-swap="outerHTML"
+            hx-target="#modal"
+            {{else}}
             hx-post="/table"
             hx-vals='{"idx": "{{$i}}", "lvl": "{{$.lvl}}"}'
             hx-swap="outerHTML"
             hx-target="#{{$.nxtLvlName}}"
+            {{end}}
           >
             &rarr;
           </button>

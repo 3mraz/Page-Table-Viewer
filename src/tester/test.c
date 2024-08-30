@@ -10,7 +10,7 @@ int main() {
   printf("hello (virtual address): %p\n", (void *)&hello);
 
   // Add some more stack variables
-  unsigned int var1 = 1;
+  char var1[] = "hello";
   unsigned int var2 = 2;
   unsigned int var3 = 3;
   printf("var1 (virtual address): %p\n", (void *)&var1);

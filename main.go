@@ -28,6 +28,8 @@ func main() {
 	http.HandleFunc("/only-present", handlers.GeneralHandler)
 	http.HandleFunc("/show-path", handlers.ShowPathHandler)
 	http.HandleFunc("/save-entry", handlers.SaveEntryHandler)
+	http.HandleFunc("/show-phys-page", handlers.ShowPhysPageHandler)
+	http.HandleFunc("/close-modal", handlers.CloseModalHandler)
 
 	log.Fatal(http.ListenAndServe(":8000", nil))
 

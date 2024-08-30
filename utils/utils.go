@@ -373,3 +373,13 @@ func UpdateEntry(entryValues map[string]interface{}, pid uint64) (PTEntry, error
 	C.ptedit_print_entry(cEntry.pte)
 	return e, nil
 }
+
+func ReadPhysPage(pfn uint64) []byte {
+	pageSize := C.size_t(C.ptedit_get_pagesize())
+	page := (*C.char)(C.malloc(pageSize))
+	defer C.free(unsafe.Pointer(page))
+	C.ptedit_read_physical_page(C.size_t(pfn), page)
+	// C.print_phys_page(C.size_t(pfn))
+	goPage := C.GoBytes(unsafe.Pointer(page), C.int(pageSize))
+	return goPage
+}

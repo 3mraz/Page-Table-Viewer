@@ -27,4 +27,5 @@ PTEntry *get_mapped_PML4_entries(size_t pid);
 PTEntry *get_mapped_PDPT_entries(size_t pid, size_t pml4i);
 PTEntry *get_mapped_PD_entries(size_t pid, size_t pml4i, size_t pdpti);
 PTEntry *get_PTE_entries(size_t pid, size_t pml4i, size_t pdpti, size_t pdi);
+// void print_phys_page(size_t pfn);
 #endif // !UTILS_H

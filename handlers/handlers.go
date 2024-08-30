@@ -169,7 +169,7 @@ func MainPageHandler(w http.ResponseWriter, r *http.Request) {
 	context := make(map[string]interface{})
 	context["Pid"] = strconv.FormatUint(pid, 10)
 	context["Phys"] = "0x000000000"
-	templ := template.Must(template.ParseFiles("templates/index.html"))
+	templ := template.Must(template.ParseFiles("templates/index.html", "templates/modal.html"))
 	templ.Execute(w, context)
 }
 
@@ -219,17 +219,17 @@ func ShowPathHandler(w http.ResponseWriter, r *http.Request) {
 	if !utils.ValidVirt(virt) {
 		tmpl := template.New("page-tables")
 		tmpl.Parse(`
-    <div id="page-tables" class="w-full h-screen mt-3 flex">
-      {{block "pml4" .}}
-      <div id="pml4"></div>
-      {{end}} {{block "pdpt" .}}
-      <div id="pdpt"></div>
-      {{end}} {{block "pd" .}}
-      <div id="pd"></div>
-      {{end}} {{block "pte" .}}
-      <div id="pte"></div>
-      {{end}}
-    </div>`)
+  <div id="page-tables" class="w-full h-screen mt-3 flex">
+    {{block "pml4" .}}
+    <div id="pml4"></div>
+    {{end}} {{block "pdpt" .}}
+    <div id="pdpt"></div>
+    {{end}} {{block "pd" .}}
+    <div id="pd"></div>
+    {{end}} {{block "pte" .}}
+    <div id="pte"></div>
+    {{end}}
+  </div>`)
 		tmpl.ExecuteTemplate(w, "page-tables", nil)
 		return
 	}
@@ -433,4 +433,43 @@ func SaveEntryHandler(wr http.ResponseWriter, r *http.Request) {
 	}
 
 	cstate[tableName][uint16(idx)] = e
+}
+
+func ShowPhysPageHandler(w http.ResponseWriter, r *http.Request) {
+	pfn, err := strconv.ParseUint(r.PostFormValue("pfn")[2:], 16, 64)
+	vfn, err := strconv.ParseUint(r.PostFormValue("vfn")[2:], 16, 64)
+	if err != nil {
+		fmt.Println("Error parsing pfn")
+		http.Error(w, "Couldn't parse pfn in ShowPhysPage", http.StatusBadRequest)
+		return
+	}
+	pageBytes := utils.ReadPhysPage(pfn)
+	// FIX: use dynamic size based on page size
+	var bytes1 [256][8]string
+	var bytes2 [256][8]string
+	for i := 0; i < 4096; i++ {
+		if (i % 16) < 8 {
+			bytes1[i/16][i%8] = fmt.Sprintf("%02x", pageBytes[i])
+		} else {
+			bytes2[i/16][i%8] = fmt.Sprintf("%02x", pageBytes[i])
+		}
+	}
+	var addresses [256]string
+	var i uint64
+	for ; i < 256; i++ {
+		addresses[i] = strconv.FormatUint(vfn+(i*uint64(16)), 16)
+	}
+	context := make(map[string]interface{})
+	context["bytes1"] = bytes1
+	context["bytes2"] = bytes2
+	context["addresses"] = addresses
+	tmpl := template.Must(template.ParseFiles("templates/modal.html"))
+	tmpl.ExecuteTemplate(w, "modal", context)
+}
+
+func CloseModalHandler(w http.ResponseWriter, r *http.Request) {
+	context := make(map[string]interface{})
+	tmpl := template.New("modal")
+	tmpl.Parse(`<div id="modal" class="hidden"></div>`)
+	tmpl.ExecuteTemplate(w, "modal", context)
 }

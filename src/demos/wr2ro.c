@@ -52,8 +52,10 @@ int main(int argc, char *argv[]) {
 
   ptedit_entry_t vm = ptedit_resolve(virt_addr, pid);
   ptedit_print_entry(vm.pte);
+  vm.pte = 0;
 
-  ptedit_pte_clear_bit(virt_addr, pid, PTEDIT_PAGE_BIT_RW);
+  ptedit_update_kernel(virt_addr, pid, &vm);
+  sleep(1);
 
   vm = ptedit_resolve(virt_addr, pid);
   ptedit_print_entry(vm.pte);

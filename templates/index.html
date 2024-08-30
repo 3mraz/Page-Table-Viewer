@@ -15,6 +15,10 @@
     <!-- <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/multi-swap.js"></script> -->
   </head>
   <body hx-boost="true" class="text-sm">
+    {{block "modal" .}}
+    <div id="modal" class="hidden"></div>
+    {{end}}
+
     <h1 class="text-2xl mx-2 my-3">Page Table Viewer</h1>
     <div class="grid gap-2 grid-cols-2 grid-rows-2">
       <div id="pid-div">

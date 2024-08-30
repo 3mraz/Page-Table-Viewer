@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "module/pteditor.h"
 #include "ptedit.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -157,3 +158,26 @@ PTEntry *get_PTE_entries(size_t pid, size_t pml4i, size_t pdpti, size_t pdi) {
   free(pdpt);
   return entries;
 }
+
+/* void print_phys_page(size_t pfn) { */
+/*   size_t pagesize = ptedit_get_pagesize(); */
+/*   char *physPage = malloc(pagesize); */
+/*   if (!physPage) { */
+/*     perror("malloc failed"); */
+/*     return; */
+/*   } */
+/**/
+/*   ptedit_read_physical_page(pfn, physPage); */
+/*   size_t base_address = pfn * pagesize; */
+/**/
+/*   for (size_t i = 0; i < pagesize; i += 8) { */
+/*     printf("0x%016lx: ", base_address + i); */
+/**/
+/*     for (size_t j = 0; j < 8 && (i + j) < pagesize; j++) { */
+/*       printf("%02x ", (unsigned char)physPage[i + j]); */
+/*     } */
+/*     printf("\n"); */
+/*   } */
+/**/
+/*   free(physPage); */
+/* } */
