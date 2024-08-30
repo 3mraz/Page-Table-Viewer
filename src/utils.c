@@ -181,3 +181,20 @@ PTEntry *get_PTE_entries(size_t pid, size_t pml4i, size_t pdpti, size_t pdi) {
 /**/
 /*   free(physPage); */
 /* } */
+
+/* void print_phys_page_string(size_t pfn) { */
+/*   size_t pagesize = ptedit_get_pagesize(); */
+/*   char *physPage = malloc(pagesize); */
+/*   if (!physPage) { */
+/*     perror("malloc failed"); */
+/*     return; */
+/*   } */
+/**/
+/*   ptedit_read_physical_page(pfn, physPage); */
+/**/
+/*   for (size_t j = 0; j < pagesize; j++) { */
+/*     printf("%c", physPage[j]); */
+/*   } */
+/**/
+/*   free(physPage); */
+/* } */

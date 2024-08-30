@@ -41,7 +41,7 @@
             class="border border-black p-1 rounded bg-gray-50 text-sm"
             {{if eq $.nxtLvlName "phys"}}
             hx-post="/show-phys-page"
-            hx-vals='{"idx": "{{$i}}", "pfn": "{{$entry.Pfn}}", "vfn": "{{$entry.Vfn}}"}'
+            hx-vals='{"idx": "{{$i}}", "pfn": "{{$entry.Pfn}}", "vfn": "{{$entry.Vfn}}", "type": "hex"}'
             hx-swap="outerHTML"
             hx-target="#modal"
             {{else}}
@@ -73,7 +73,7 @@
             class="border border-black p-1 rounded bg-gray-50 text-sm"
             {{if eq $.nxtLvlName "phys"}}
             hx-post="/show-phys-page"
-            hx-vals='{"idx": "{{$i}}", "pfn": "{{$entry.Pfn}}", "vfn": "{{$entry.Vfn}}"}'
+            hx-vals='{"idx": "{{$i}}", "pfn": "{{$entry.Pfn}}", "vfn": "{{$entry.Vfn}}", "type": "hex", "obtained": "false"}'
             hx-swap="outerHTML"
             hx-target="#modal"
             {{else}}

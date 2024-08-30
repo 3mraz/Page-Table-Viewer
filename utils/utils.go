@@ -380,6 +380,7 @@ func ReadPhysPage(pfn uint64) []byte {
 	defer C.free(unsafe.Pointer(page))
 	C.ptedit_read_physical_page(C.size_t(pfn), page)
 	// C.print_phys_page(C.size_t(pfn))
+	// C.print_phys_page_string(C.size_t(pfn))
 	goPage := C.GoBytes(unsafe.Pointer(page), C.int(pageSize))
 	return goPage
 }
