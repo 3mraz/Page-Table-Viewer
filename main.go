@@ -29,6 +29,7 @@ func main() {
 	http.HandleFunc("/show-path", handlers.ShowPathHandler)
 	http.HandleFunc("/save-entry", handlers.SaveEntryHandler)
 	http.HandleFunc("/show-phys-page", handlers.ShowPhysPageHandler)
+	http.HandleFunc("/save-phys-page", handlers.SavePhysPageHandler)
 	http.HandleFunc("/close-modal", handlers.CloseModalHandler)
 
 	log.Fatal(http.ListenAndServe(":8000", nil))

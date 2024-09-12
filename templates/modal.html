@@ -18,7 +18,17 @@
       >
         as string
       </button>
-      {{else}}
+      <button
+        type="submit"
+        class="w-1/3 absolute origin-center bg-blue-500 p-1 mt-2 rounded"
+        hx-post="/show-phys-page"
+        hx-vals='{"type": "edit"}'
+        hx-target="#modal"
+        hx-swap="outerHTML"
+      >
+        Edit
+      </button>
+      {{else if eq .type "string"}}
       <button
         type="submit"
         class="bg-blue-500 p-1 m-2 rounded"
@@ -29,22 +39,34 @@
       >
         as hex
       </button>
-      {{end}}
+      {{else}}
       <button
         type="submit"
-        class="w-1/3 absolute origin-center bg-blue-500 p-1 mt-2 rounded"
-        hx-post="/close-modal"
+        class="bg-blue-500 p-1 m-2 rounded"
+        hx-post="/show-phys-page"
+        hx-vals='{"type": "hex", "obtained": "true"}'
         hx-target="#modal"
         hx-swap="outerHTML"
       >
-        Edit
+        Cancel
       </button>
+      <button
+        id="saveBtn"
+        type="submit"
+        class="w-1/3 absolute origin-center bg-blue-500 p-1 mt-2 rounded"
+        hx-post="/save-phys-page"
+        hx-include="[name=phys-page]"
+      >
+        Save
+      </button>
+      {{end}}
       <button
         type="submit"
         class="ml-auto top-0 right-0 bg-red-500 p-1 m-1 rounded size-fit"
         hx-post="/close-modal"
         hx-target="#modal"
         hx-swap="outerHTML"
+        hx-trigger="click,click from:#saveBtn"
       >
         x
       </button>
@@ -53,41 +75,56 @@
     <div
       class="h-auto w-auto row-start-2 row-end-13 m-2 grid grid-cols-6 rounded content-between space-x-2"
     >
-      <div class="col-start-1 col-end-2 flex-row rounded">
+      <div class="col-start-1 col-end-2 rounded pl-3">
         {{range $address := .addresses}}
         <div>0x{{$address}}:</div>
         {{end}}
       </div>
       <div class="col-start-2 col-end-7 bg-red-200 grid grid-cols-2 rounded">
-        <div
-          class="col-start-1 col-end-2 flex-row bg-yellow-300 grid grid-cols-8"
-        >
+        <div class="col-start-1 col-end-2 bg-yellow-300">
           {{range $bytesChunk1 := .bytes1}}
-          <div class="text-center">
+          <div class="text-center grid grid-cols-8">
             {{range $byte := .}}
-            <div class="col-span-1">{{$byte}}</div>
+            <div class="col-span-1 row-span-1">{{$byte}}</div>
             {{end}}
           </div>
           {{end}}
         </div>
-        <div
-          class="col-start-2 col-end-3 flex-row bg-green-300 grid grid-cols-8"
-        >
+        <div class="col-start-2 col-end-3 bg-green-300">
           {{range $bytesChunk2 := .bytes2}}
-          <div class="text-center">
+          <div class="text-center grid grid-cols-8">
             {{range $byte := .}}
-            <div class="col-span-1">{{$byte}}</div>
+            <div class="col-span-1 row-span-1">{{$byte}}</div>
             {{end}}
           </div>
           {{end}}
         </div>
       </div>
     </div>
-    {{else}}
+    {{else if eq .type "string"}}
     <div class="m-2 w-auto break-words whitespace-normal overflow-hidden">
       {{.string}}
     </div>
-    {{end}}
+    {{else}}
+    <div
+      class="h-auto w-auto row-start-2 row-end-13 m-2 grid grid-cols-6 rounded content-between space-x-2"
+    >
+      <div class="col-start-1 col-end-2 rounded pl-3">
+        {{range $address := .addresses}}
+        <div>0x{{$address}}:</div>
+        {{end}}
+      </div>
+      <div class="col-start-2 col-end-7 bg-red-200 rounded">
+        <textarea
+          name="phys-page"
+          class="w-full h-full resize-none overflow-hidden pl-3"
+          style="line-height: 1.429; word-spacing: 1.4rem"
+        >
+{{range $byteChunk := .bytes}}{{range $byte := $byteChunk}}{{$byte}} {{end}}{{end}}</textarea
+        >
+      </div>
+      {{end}}
+    </div>
   </div>
+  {{ end }}
 </div>
-{{ end }}

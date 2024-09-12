@@ -444,9 +444,10 @@ func ShowPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 	if t == "string" {
 		pageString := string(pageBytes)
 		context["string"] = pageString
-	} else {
+	} else if t == "hex" {
 		if pageObtained != "true" {
 			pfn, err := strconv.ParseUint(r.PostFormValue("pfn")[2:], 16, 64)
+			fmt.Printf("show phys page: pfn = 0x%x\n", pfn)
 			vfn, err := strconv.ParseUint(r.PostFormValue("vfn")[2:], 16, 64)
 			if err != nil {
 				fmt.Println("Error parsing pfn")
@@ -472,10 +473,34 @@ func ShowPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 		context["bytes1"] = bytes1
 		context["bytes2"] = bytes2
 		context["addresses"] = addresses
+	} else {
+		var b [256][16]string
+		for i := 0; i < 4096; i++ {
+			b[i/16][i%16] = fmt.Sprintf("%02x", pageBytes[i])
+		}
+		context["bytes"] = b
+		context["addresses"] = addresses
 	}
 	context["type"] = t
 	tmpl := template.Must(template.ParseFiles("templates/modal.html"))
 	tmpl.ExecuteTemplate(w, "modal", context)
+}
+
+func SavePhysPageHandler(w http.ResponseWriter, r *http.Request) {
+	physPage := r.PostFormValue("phys-page")
+	physPageSlice := strings.Fields(physPage)
+	data, err := utils.ConvertHexStringsToBytes(physPageSlice)
+	if err != nil {
+		fmt.Println("Error while converting phys. page to bytes")
+		http.Error(w, "Conversion to bytes failed", http.StatusBadRequest)
+	}
+	pfn, err := strconv.ParseUint(utils.Virt2Phys("0x"+addresses[0], pid)[2:], 16, 64)
+	if err != nil {
+		fmt.Println("Error", err)
+		http.Error(w, "Error parsing pfn in SavePhysPageHandler", http.StatusBadRequest)
+	}
+	fmt.Printf("save phys page: pfn = 0x%x\n", pfn>>12)
+	utils.WritePhysPage(pfn>>12, data)
 }
 
 func CloseModalHandler(w http.ResponseWriter, r *http.Request) {

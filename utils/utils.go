@@ -379,8 +379,27 @@ func ReadPhysPage(pfn uint64) []byte {
 	page := (*C.char)(C.malloc(pageSize))
 	defer C.free(unsafe.Pointer(page))
 	C.ptedit_read_physical_page(C.size_t(pfn), page)
-	// C.print_phys_page(C.size_t(pfn))
-	// C.print_phys_page_string(C.size_t(pfn))
 	goPage := C.GoBytes(unsafe.Pointer(page), C.int(pageSize))
 	return goPage
+}
+
+func WritePhysPage(pfn uint64, data []byte) {
+	goDataAsStr := string(data)
+	pageData := C.CString(goDataAsStr)
+	defer C.free(unsafe.Pointer(pageData))
+	C.ptedit_write_physical_page(C.size_t(pfn), pageData)
+}
+
+func ConvertHexStringsToBytes(hexStrings []string) ([]byte, error) {
+	data := make([]byte, len(hexStrings))
+	for i, e := range hexStrings {
+		var b byte
+		_, err := fmt.Sscanf(e, "%x", &b)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			return nil, err
+		}
+		data[i] = b
+	}
+	return data, nil
 }
