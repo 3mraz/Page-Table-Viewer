@@ -118,7 +118,13 @@
         <textarea
           name="phys-page"
           class="w-full h-full resize-none overflow-hidden pl-3"
-          style="line-height: 1.429; word-spacing: 1.4rem"
+          style="
+            line-height: 1.429;
+            word-spacing: 1rem;
+            font-family:
+              Courier New,
+              monospace;
+          "
         >
 {{range $byteChunk := .bytes}}{{range $byte := $byteChunk}}{{$byte}} {{end}}{{end}}</textarea
         >

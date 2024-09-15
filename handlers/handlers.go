@@ -447,7 +447,6 @@ func ShowPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 	} else if t == "hex" {
 		if pageObtained != "true" {
 			pfn, err := strconv.ParseUint(r.PostFormValue("pfn")[2:], 16, 64)
-			fmt.Printf("show phys page: pfn = 0x%x\n", pfn)
 			vfn, err := strconv.ParseUint(r.PostFormValue("vfn")[2:], 16, 64)
 			if err != nil {
 				fmt.Println("Error parsing pfn")
@@ -499,7 +498,6 @@ func SavePhysPageHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Error", err)
 		http.Error(w, "Error parsing pfn in SavePhysPageHandler", http.StatusBadRequest)
 	}
-	fmt.Printf("save phys page: pfn = 0x%x\n", pfn>>12)
 	utils.WritePhysPage(pfn>>12, data)
 }
 
