@@ -9,7 +9,9 @@ import "C"
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -27,6 +29,19 @@ type Entry struct {
 	pte    uint64
 	valid  uint64
 	cEntry C.ptedit_entry_t
+}
+
+type Translation struct {
+	Pml4 string `json:"pml4"`
+	Pdpt string `json:"pdpt"`
+	Pd   string `json:"pd"`
+	Pte  string `json:"pte"`
+}
+
+type Page struct {
+	Content     string      `json:"content"`
+	Vfn         string      `json:"vfn"`
+	Translation Translation `json:"translation"`
 }
 
 type PTEntry struct {
@@ -203,6 +218,82 @@ func ParsePTEntry(entry uint64, vaddr uint64) PTEntry {
 	return e
 }
 
+func bytesToHex(data []byte) string {
+	hexString := ""
+	for i := 0; i < len(data); i++ {
+		hexString += fmt.Sprintf("%02X", data[i])
+	}
+	return hexString
+}
+
+func GetAllPhysPages(pid uint64) []Page {
+	var physPages []Page
+	tableSize := 512
+	pml4Entries := C.get_mapped_PML4_entries(C.size_t(pid))
+	defer C.free(unsafe.Pointer(pml4Entries))
+	pml4Size := int(C.FIRST_LEVEL_ENTRIES)
+	pml4GoEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(pml4Entries))[:pml4Size:pml4Size]
+	for pml4i, pml4e := range pml4GoEntries {
+		if pml4e.entry != 0 {
+			pdptEntries := C.get_mapped_PDPT_entries(C.size_t(pid), C.size_t(pml4i))
+			defer C.free(unsafe.Pointer(pdptEntries))
+			pdptGoEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(pdptEntries))[:tableSize:tableSize]
+			for pdpti, pdpte := range pdptGoEntries {
+				if pdpte.entry != 0 {
+					pdEntries := C.get_mapped_PD_entries(C.size_t(pid), C.size_t(pml4i), C.size_t(pdpti))
+					defer C.free(unsafe.Pointer(pdEntries))
+					pdGoEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(pdEntries))[:tableSize:tableSize]
+					for pdi, pde := range pdGoEntries {
+						if pde.entry != 0 {
+							pteEntries := C.get_PTE_entries(C.size_t(pid), C.size_t(pml4i), C.size_t(pdpti), C.size_t(pdi))
+							defer C.free(unsafe.Pointer(pteEntries))
+							pteGoEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(pteEntries))[:tableSize:tableSize]
+							for ptei, ptee := range pteGoEntries {
+								if ptee.entry != 0 {
+									e := ParsePTEntry(uint64(ptee.entry), uint64(ptee.vaddr))
+									pageSize := C.size_t(C.ptedit_get_pagesize())
+									page := (*C.char)(C.malloc(pageSize))
+									defer C.free(unsafe.Pointer(page))
+									physPage := ReadPhysPage((uint64(ptee.entry) >> 12) & uint64((uint64(1)<<40)-1))
+									p := Page{
+										Content:     bytesToHex(physPage),
+										Vfn:         e.Vfn,
+										Translation: Translation{Pml4: fmt.Sprintf("%d", pml4i), Pdpt: fmt.Sprintf("%d", pdpti), Pd: fmt.Sprintf("%d", pdi), Pte: fmt.Sprintf("%d", ptei)},
+									}
+									physPages = append(physPages, p)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return physPages
+}
+
+func CreateJSONFile(pages []Page, filename string, file *os.File) error {
+	pageMap := make(map[string]interface{})
+
+	// Populate the map with the data from the slice
+	for idx, page := range pages {
+		key := fmt.Sprintf("page-%d", idx)
+
+		pageMap[key] = map[string]interface{}{
+			"content":     page.Content,
+			"vfn":         page.Vfn,
+			"translation": page.Translation,
+		}
+	}
+
+	encoder := json.NewEncoder(file)
+	err := encoder.Encode(pageMap)
+	if err != nil {
+		return fmt.Errorf("Failed to encode JSON data")
+	}
+	return nil
+}
+
 func GetFirstLvl(pid uint64) []PTEntry {
 	var ptEntries []PTEntry
 	entries := C.get_mapped_PML4_entries(C.size_t(pid))
@@ -223,8 +314,8 @@ func GetSecondLvl(pid uint64, pml4i int64) []PTEntry {
 	defer C.free(unsafe.Pointer(entries))
 	length := 512
 	goEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(entries))[:length:length]
-	for i, v := range goEntries {
-		if goEntries[i].entry != 0 {
+	for _, v := range goEntries {
+		if v.entry != 0 {
 			ptEntries = append(ptEntries, ParsePTEntry(uint64(v.entry), uint64(v.vaddr)))
 		}
 	}
@@ -237,8 +328,8 @@ func GetThirdLvl(pid uint64, pml4i int64, pdpti int64) []PTEntry {
 	defer C.free(unsafe.Pointer(entries))
 	length := 512
 	goEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(entries))[:length:length]
-	for i, v := range goEntries {
-		if goEntries[i].entry != 0 {
+	for _, v := range goEntries {
+		if v.entry != 0 {
 			ptEntries = append(ptEntries, ParsePTEntry(uint64(v.entry), uint64(v.vaddr)))
 		}
 	}
@@ -251,8 +342,8 @@ func GetFourthLvl(pid uint64, pml4i int64, pdpti int64, pdi int64) []PTEntry {
 	defer C.free(unsafe.Pointer(entries))
 	length := 512
 	goEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(entries))[:length:length]
-	for i, v := range goEntries {
-		if goEntries[i].entry != 0 {
+	for _, v := range goEntries {
+		if v.entry != 0 {
 			ptEntries = append(ptEntries, ParsePTEntry(uint64(v.entry), uint64(v.vaddr)))
 		}
 	}

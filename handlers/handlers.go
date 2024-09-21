@@ -1,11 +1,15 @@
 package handlers
 
 import (
+	"bufio"
 	"cgo_test/utils"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -111,7 +115,7 @@ func setup_temp(idx int64, lvl uint64, present string) (map[uint16]utils.PTEntry
 	var nxtLvlName string
 	var tmplPath string
 	var numEntries uint16 = 512
-	var only_present bool = false
+	var only_present bool = true
 	var err error = nil
 
 	if present != "" {
@@ -506,4 +510,110 @@ func CloseModalHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.New("modal")
 	tmpl.Parse(`<div id="modal" class="hidden"></div>`)
 	tmpl.ExecuteTemplate(w, "modal", context)
+}
+
+func CloseInfoModalHandler(w http.ResponseWriter, r *http.Request) {
+	context := make(map[string]interface{})
+	tmpl := template.New("info-modal")
+	tmpl.Parse(`<div id="info-modal" class="hidden"></div>`)
+	tmpl.Execute(w, context)
+}
+
+func DumpPhysPagesHandler(w http.ResponseWriter, r *http.Request) {
+	var physPages []utils.Page
+	physPages = utils.GetAllPhysPages(pid)
+
+	pageMap := make(map[string]interface{})
+
+	// Populate the map with the data from the slice
+	for idx, page := range physPages {
+		key := fmt.Sprintf("page-%d", idx)
+
+		pageMap[key] = map[string]interface{}{
+			"content":     page.Content,
+			"vfn":         page.Vfn,
+			"translation": page.Translation,
+		}
+	}
+
+	jsonBytes, err := json.Marshal(pageMap)
+	if err != nil {
+		http.Error(w, "Failed to encode JSON data", http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", "data.json"))
+	w.Write(jsonBytes)
+}
+
+func ShowInfoModalHandler(w http.ResponseWriter, r *http.Request) {
+	templ := template.Must(template.ParseFiles("templates/info-modal.html"))
+	templ.ExecuteTemplate(w, "info-modal", nil)
+}
+
+func ShowProcessMapsHandler(w http.ResponseWriter, r *http.Request) {
+	file, err := os.Open(fmt.Sprintf("/proc/%d/maps", pid))
+	if err != nil {
+		fmt.Println("Cannot open maps file")
+		http.Error(w, "Cannot open maps file", http.StatusInternalServerError)
+	}
+	defer file.Close()
+	strBuilder := strings.Builder{}
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		strBuilder.WriteString(fmt.Sprintf("%s\n", line))
+	}
+	context := make(map[string]interface{})
+	c := strings.ReplaceAll(strBuilder.String(), "                    ", "   ")
+	context["maps"] = c
+	templ := template.Must(template.ParseFiles("templates/info-modal.html"))
+	templ.ExecuteTemplate(w, "info-content", context)
+}
+
+func getProgPath(pid uint64) (string, error) {
+	path := fmt.Sprintf("/proc/%d/exe", pid)
+	cmd := exec.Command("readlink", path)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return (strings.ReplaceAll(string(output), "\n", "")), nil
+}
+
+func ShowBinarySectionsHandler(w http.ResponseWriter, r *http.Request) {
+	progPath, err := getProgPath(pid)
+	if err != nil {
+		http.Error(w, "Cannot get process name", http.StatusInternalServerError)
+		return
+	}
+	cmd := exec.Command("objdump", "-h", progPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Couldn't execute: %s\nCause: %v\n", cmd, err)
+		http.Error(w, "Couldn't execute command", http.StatusInternalServerError)
+		return
+	}
+	context := make(map[string]interface{})
+	context["maps"] = string(output)
+	templ := template.Must(template.ParseFiles("templates/info-modal.html"))
+	templ.ExecuteTemplate(w, "info-content", context)
+}
+
+func ShowProgramCodeHandler(w http.ResponseWriter, r *http.Request) {
+	progPath, err := getProgPath(pid)
+	if err != nil {
+		http.Error(w, "Cannot get process name", http.StatusInternalServerError)
+		return
+	}
+	cmd := exec.Command("objdump", "-d", "-M", "intel", progPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Couldn't execute: %s\nCause: %v\n", cmd, err)
+		http.Error(w, "Couldn't execute command", http.StatusInternalServerError)
+		return
+	}
+	context := make(map[string]interface{})
+	context["maps"] = string(output)
+	templ := template.Must(template.ParseFiles("templates/info-modal.html"))
+	templ.ExecuteTemplate(w, "info-content", context)
 }

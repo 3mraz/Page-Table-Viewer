@@ -31,7 +31,12 @@ func main() {
 	http.HandleFunc("/show-phys-page", handlers.ShowPhysPageHandler)
 	http.HandleFunc("/save-phys-page", handlers.SavePhysPageHandler)
 	http.HandleFunc("/close-modal", handlers.CloseModalHandler)
-
+	http.HandleFunc("/close-info-modal", handlers.CloseInfoModalHandler)
+	http.HandleFunc("/dump-pages", handlers.DumpPhysPagesHandler)
+	http.HandleFunc("/show-info-modal", handlers.ShowInfoModalHandler)
+	http.HandleFunc("/show-maps", handlers.ShowProcessMapsHandler)
+	http.HandleFunc("/show-sections", handlers.ShowBinarySectionsHandler)
+	http.HandleFunc("/show-code", handlers.ShowProgramCodeHandler)
 	log.Fatal(http.ListenAndServe(":8000", nil))
 
 	utils.PteditCleanup()

@@ -15,7 +15,9 @@
     <!-- <script src="https://unpkg.com/htmx.org@1.9.12/dist/ext/multi-swap.js"></script> -->
   </head>
   <body hx-boost="true" class="text-sm">
-    {{block "modal" .}}
+    {{block "info-modal" .}}
+    <div id="info-modal" class="hidden"></div>
+    {{end}} {{block "modal" .}}
     <div id="modal" class="hidden"></div>
     {{end}}
 
@@ -79,22 +81,41 @@
       {{block "full-entry" .}}
       <div
         id="full-entry"
-        class="bg-blue-400 row-start-1 row-end-3 col-start-2 text-center content-center rounded mx-2"
+        class="flex bg-blue-400 row-start-1 row-end-3 col-start-2 rounded mx-2 justify-center items-center"
       >
         Click on entry to display full entry here
       </div>
       {{end}}
     </div>
-    <button
-      hx-post="/table"
-      hx-vals='{"lvl": 0, "idx": 0}'
-      hx-swap="outerHTML"
-      hx-target="#pml4"
-      type="submit"
-      class="border-2 border-black p-1 rounded bg-gray-50 m-2"
-    >
-      Show Tables
-    </button>
+    <div class="flex flex-row">
+      <button
+        hx-post="/table"
+        hx-vals='{"lvl": 0, "idx": 0}'
+        hx-swap="outerHTML"
+        hx-target="#pml4"
+        type="submit"
+        class="border-2 border-black p-1 rounded bg-gray-50 m-2"
+      >
+        Show Tables
+      </button>
+      <button
+        id="show-info-btn"
+        hx-post="/show-info-modal"
+        hx-target="#info-modal"
+        hx-swap="outerHTML"
+        class="border-2 border-black p-1 rounded bg-gray-50 m-2"
+      >
+        Process Info
+      </button>
+      <form action="/dump-pages" method="get" hx-disable="true">
+        <button
+          class="border-2 border-black p-1 rounded bg-gray-50 m-2"
+          type="submit"
+        >
+          Dump Pages
+        </button>
+      </form>
+    </div>
     {{ block "page-tables" .}}
     <div id="page-tables" class="w-full h-screen mt-3 flex">
       {{block "pml4" .}}
