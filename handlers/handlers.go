@@ -7,12 +7,23 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
+	"syscall"
+	"time"
 )
+
+type MemPage struct {
+	pageBytes []byte
+	nx        string
+	addresses [256]string
+	offset    uint64
+}
 
 var (
 	pid               uint64                              = 0
@@ -26,8 +37,8 @@ var (
 	only_present_pte  bool                                = false
 	cstate            map[string]map[uint16]utils.PTEntry = make(map[string]map[uint16]utils.PTEntry)
 	warnings          []string
-	pageBytes         []byte
-	addresses         [256]string
+	currentMemPage    MemPage
+	startAddress      string
 )
 
 func reset_env() {
@@ -41,6 +52,7 @@ func reset_env() {
 	only_present_pd = false
 	only_present_pte = false
 	cstate = make(map[string]map[uint16]utils.PTEntry)
+	warnings = make([]string, 0)
 }
 
 func getEntries(lvl uint64, present string, tmplName string, numEntries uint16) (map[uint16]utils.PTEntry, error) {
@@ -93,6 +105,29 @@ func parseVirt(virtAddr string) (pml4i int64, pdpti int64, pdi int64, ptei int64
 		return pml4Idx, pdptIdx, pdIdx, pteIdx, nil
 	}
 	return -1, -1, -1, -1, fmt.Errorf("Couldn't parse virtAddr")
+}
+
+func basePlusOffset(offset string) (string, error) {
+	offsetInt, err := strconv.ParseUint(offset[2:], 16, 64)
+	if err != nil {
+		return "", err
+	}
+	baseInt, err := strconv.ParseUint(startAddress[2:], 16, 64)
+	if err != nil {
+		return "", err
+	}
+	fullAddr := fmt.Sprintf("0x%s", strconv.FormatUint(baseInt+offsetInt, 16))
+	return fullAddr, nil
+}
+
+func _calc_offset(vfn uint64) (uint64, error) {
+	baseInt, err := strconv.ParseUint(startAddress[2:], 16, 64)
+	if err != nil {
+		fmt.Println(err)
+		return 0, err
+	}
+	fullOffset := vfn - baseInt
+	return fullOffset, nil
 }
 
 func _calc_vfn(lvl uint64, idx int64) string {
@@ -196,10 +231,19 @@ func PidHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pidHTML := fmt.Sprintf("<label id='pid' for='virt'><b>Process Id:</b> %d</label>", pid)
+	file, err := os.Open(fmt.Sprintf("/proc/%d/maps", pid))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Cannot open file %s.", file.Name()), http.StatusInternalServerError)
+		return
+	}
+	reader := bufio.NewReader(file)
+	virtAddr, err := reader.ReadString('-')
+	startAddress = fmt.Sprintf("0x%s", virtAddr[:len(virtAddr)-1])
 
 	tmpl, _ := template.New("pidHTML").Parse(pidHTML)
 	if err := tmpl.Execute(w, nil); err != nil {
 		http.Error(w, "cannot execute template", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -443,48 +487,73 @@ func SaveEntryHandler(wr http.ResponseWriter, r *http.Request) {
 func ShowPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 	t := r.PostFormValue("type")
 	pageObtained := r.PostFormValue("obtained")
-
 	context := make(map[string]interface{})
 	if t == "string" {
-		pageString := string(pageBytes)
+		pageString := string(currentMemPage.pageBytes)
 		context["string"] = pageString
 	} else if t == "hex" {
 		if pageObtained != "true" {
 			pfn, err := strconv.ParseUint(r.PostFormValue("pfn")[2:], 16, 64)
-			vfn, err := strconv.ParseUint(r.PostFormValue("vfn")[2:], 16, 64)
 			if err != nil {
 				fmt.Println("Error parsing pfn")
 				http.Error(w, "Couldn't parse pfn in ShowPhysPage", http.StatusBadRequest)
 				return
 			}
-			pageBytes = utils.ReadPhysPage(pfn)
+			vfn, err := strconv.ParseUint(r.PostFormValue("vfn")[2:], 16, 64)
+			if err != nil {
+				fmt.Println("Error parsing vfn")
+				http.Error(w, "Couldn't parse vfn in ShowPhysPage", http.StatusBadRequest)
+				return
+			}
+			currentMemPage.offset, err = _calc_offset(vfn)
+			if err != nil {
+				fmt.Println("Couldn't parse the offset of the current page")
+				http.Error(w, "Couldn't parse the offset of the current page", http.StatusInternalServerError)
+				return
+			}
+			currentMemPage.nx = r.PostFormValue("nx")
+			currentMemPage.pageBytes = utils.ReadPhysPage(pfn)
 			var i uint64
 			for ; i < 256; i++ {
-				addresses[i] = strconv.FormatUint(vfn+(i*uint64(16)), 16)
+				currentMemPage.addresses[i] = strconv.FormatUint(vfn+(i*uint64(16)), 16)
 			}
 		}
-		// FIX: use dynamic size based on page size
+		// TODO: use dynamic size based on page size
 		var bytes1 [256][8]string
 		var bytes2 [256][8]string
 		for i := 0; i < 4096; i++ {
 			if (i % 16) < 8 {
-				bytes1[i/16][i%8] = fmt.Sprintf("%02x", pageBytes[i])
+				bytes1[i/16][i%8] = fmt.Sprintf("%02x", currentMemPage.pageBytes[i])
 			} else {
-				bytes2[i/16][i%8] = fmt.Sprintf("%02x", pageBytes[i])
+				bytes2[i/16][i%8] = fmt.Sprintf("%02x", currentMemPage.pageBytes[i])
 			}
 		}
 		context["bytes1"] = bytes1
 		context["bytes2"] = bytes2
-		context["addresses"] = addresses
-	} else {
+		context["addresses"] = currentMemPage.addresses
+	} else if t == "code" {
+		codeSections, err := utils.ParseProgramCode(pid)
+		if err != nil {
+			context["code"] = fmt.Sprintf("%s", err)
+		} else {
+			strBuilder := strings.Builder{}
+			for _, section := range codeSections {
+				if (section.Offset >= currentMemPage.offset) && (section.Offset < (currentMemPage.offset + uint64(4096))) {
+					strBuilder.WriteString(fmt.Sprintf("%016x     %s\n%s\n\n\n", section.Offset, section.Name, section.Code))
+				}
+			}
+			context["code"] = strBuilder.String()
+		}
+	} else { // for edit view
 		var b [256][16]string
 		for i := 0; i < 4096; i++ {
-			b[i/16][i%16] = fmt.Sprintf("%02x", pageBytes[i])
+			b[i/16][i%16] = fmt.Sprintf("%02x", currentMemPage.pageBytes[i])
 		}
 		context["bytes"] = b
-		context["addresses"] = addresses
+		context["addresses"] = currentMemPage.addresses
 	}
 	context["type"] = t
+	context["nx"] = currentMemPage.nx
 	tmpl := template.Must(template.ParseFiles("templates/modal.html"))
 	tmpl.ExecuteTemplate(w, "modal", context)
 }
@@ -497,7 +566,7 @@ func SavePhysPageHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Error while converting phys. page to bytes")
 		http.Error(w, "Conversion to bytes failed", http.StatusBadRequest)
 	}
-	pfn, err := strconv.ParseUint(utils.Virt2Phys("0x"+addresses[0], pid)[2:], 16, 64)
+	pfn, err := strconv.ParseUint(utils.Virt2Phys("0x"+currentMemPage.addresses[0], pid)[2:], 16, 64)
 	if err != nil {
 		fmt.Println("Error", err)
 		http.Error(w, "Error parsing pfn in SavePhysPageHandler", http.StatusBadRequest)
@@ -545,6 +614,20 @@ func DumpPhysPagesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonBytes)
 }
 
+func DownloadPhysPageHandler(w http.ResponseWriter, r *http.Request) {
+	strBuilder := strings.Builder{}
+	for i, b := range currentMemPage.pageBytes {
+		if (i % 16) == 15 {
+			strBuilder.WriteString(fmt.Sprintf("%02x\n", b))
+		} else {
+			strBuilder.WriteString(fmt.Sprintf("%02x ", b))
+		}
+	}
+	w.Header().Set("Content-Type", "application/text")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", "page.txt"))
+	w.Write([]byte(strBuilder.String()))
+}
+
 func ShowInfoModalHandler(w http.ResponseWriter, r *http.Request) {
 	templ := template.Must(template.ParseFiles("templates/info-modal.html"))
 	templ.ExecuteTemplate(w, "info-modal", nil)
@@ -570,50 +653,150 @@ func ShowProcessMapsHandler(w http.ResponseWriter, r *http.Request) {
 	templ.ExecuteTemplate(w, "info-content", context)
 }
 
-func getProgPath(pid uint64) (string, error) {
-	path := fmt.Sprintf("/proc/%d/exe", pid)
-	cmd := exec.Command("readlink", path)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	return (strings.ReplaceAll(string(output), "\n", "")), nil
-}
-
 func ShowBinarySectionsHandler(w http.ResponseWriter, r *http.Request) {
-	progPath, err := getProgPath(pid)
+	context := make(map[string]interface{})
+	progPath, err := utils.GetProgPath(pid)
 	if err != nil {
 		http.Error(w, "Cannot get process name", http.StatusInternalServerError)
 		return
 	}
 	cmd := exec.Command("objdump", "-h", progPath)
 	output, err := cmd.CombinedOutput()
+	var o string
 	if err != nil {
-		fmt.Printf("Couldn't execute: %s\nCause: %v\n", cmd, err)
-		http.Error(w, "Couldn't execute command", http.StatusInternalServerError)
-		return
+		o = fmt.Sprintf("Failed to execute \"%s\".\nCheck if objdump exists on your system!", cmd)
+	} else {
+		o = string(output)
 	}
-	context := make(map[string]interface{})
-	context["maps"] = string(output)
+	context["maps"] = o
 	templ := template.Must(template.ParseFiles("templates/info-modal.html"))
 	templ.ExecuteTemplate(w, "info-content", context)
 }
 
-func ShowProgramCodeHandler(w http.ResponseWriter, r *http.Request) {
-	progPath, err := getProgPath(pid)
-	if err != nil {
-		http.Error(w, "Cannot get process name", http.StatusInternalServerError)
-		return
+var (
+	gdbCmd           *exec.Cmd
+	stdinPipe        io.WriteCloser
+	stdoutPipe       io.ReadCloser
+	mu               sync.Mutex // Mutex for synchronizing access to strBuilder
+	gdbSessionActive bool
+	gdbProcess       *os.Process
+	gdbOutput        []string
+	ch               chan string
+)
+
+func readChannel() {
+	var shouldBreak bool
+
+	for {
+		select {
+		case val := <-ch:
+			if strings.Contains(val, "(gdb) ") {
+				val = strings.ReplaceAll(val, "(gdb) ", "")
+			}
+			gdbOutput = append(gdbOutput, val)
+		case <-time.After(time.Second):
+			shouldBreak = true
+		}
+
+		if shouldBreak {
+			break
+		}
 	}
-	cmd := exec.Command("objdump", "-d", "-M", "intel", progPath)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("Couldn't execute: %s\nCause: %v\n", cmd, err)
-		http.Error(w, "Couldn't execute command", http.StatusInternalServerError)
-		return
+}
+
+func readStdout() {
+	stdoutScanner := bufio.NewScanner(stdoutPipe)
+	for stdoutScanner.Scan() {
+		line := stdoutScanner.Text()
+
+		mu.Lock()
+		ch <- line
+		mu.Unlock()
 	}
-	context := make(map[string]interface{})
-	context["maps"] = string(output)
+}
+
+func AttachGDBHandler(w http.ResponseWriter, r *http.Request) {
+	if !gdbSessionActive {
+		gdbOutput = make([]string, 0)
+		gdbCmd = exec.Command("gdb", "--pid", fmt.Sprintf("%d", pid))
+
+		// Get the pipes for stdin and stdout
+		var err error
+		stdinPipe, err = gdbCmd.StdinPipe()
+		if err != nil {
+			http.Error(w, "Error getting StdinPipe", http.StatusInternalServerError)
+			return
+		}
+
+		stdoutPipe, err = gdbCmd.StdoutPipe()
+		if err != nil {
+			http.Error(w, "Error getting StdoutPipe", http.StatusInternalServerError)
+			return
+		}
+
+		// Start the GDB process
+		if err := gdbCmd.Start(); err != nil {
+			http.Error(w, "Error starting GDB", http.StatusInternalServerError)
+			return
+		}
+		gdbProcess = gdbCmd.Process
+
+		ch = make(chan string)
+		go readStdout()
+		readChannel()
+		gdbSessionActive = true
+	}
+
+	combinedOutput := strings.Join(gdbOutput, "\n")
+	context := map[string]interface{}{"maps": combinedOutput, "gdb": "true"}
+	templ := template.Must(template.ParseFiles("templates/info-modal.html"))
+	templ.ExecuteTemplate(w, "info-content", context)
+}
+
+func SendCommandHandler(w http.ResponseWriter, r *http.Request) {
+	gdb := "true"
+	sigint := r.PostFormValue("sigint")
+	if sigint == "true" {
+		if gdbProcess != nil {
+			if err := gdbProcess.Signal(syscall.SIGINT); err != nil {
+				fmt.Println("Failed to send SIGINT:", err)
+			}
+		}
+	} else {
+		command := r.PostFormValue("command")
+		if command == "" {
+			http.Error(w, "Command is required", http.StatusBadRequest)
+			return
+		}
+
+		if command == "q" {
+			if gdbProcess != nil {
+				if err := gdbProcess.Signal(syscall.SIGINT); err != nil {
+					fmt.Println("Failed to send SIGINT:", err)
+				}
+			}
+		}
+
+		if _, err := stdinPipe.Write([]byte(command + "\n")); err != nil {
+			http.Error(w, "Couldn't execute command on GDB", http.StatusInternalServerError)
+			fmt.Println("Couldn't execute command on GDB")
+			return
+		}
+
+		gdbOutput = append(gdbOutput, fmt.Sprintf("(gdb) %s", command))
+		readChannel()
+
+		if command == "q" {
+			gdb = ""
+			gdbSessionActive = false
+			close(ch)
+			stdinPipe.Write([]byte("y\n"))
+		}
+	}
+
+	combinedOutput := strings.Join(gdbOutput, "\n")
+
+	context := map[string]interface{}{"maps": combinedOutput, "gdb": gdb}
 	templ := template.Must(template.ParseFiles("templates/info-modal.html"))
 	templ.ExecuteTemplate(w, "info-content", context)
 }

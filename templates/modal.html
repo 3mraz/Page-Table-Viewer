@@ -18,6 +18,23 @@
       >
         as string
       </button>
+      {{if eq .nx "false"}}
+      <button
+        type="submit"
+        class="bg-blue-500 p-1 m-2 rounded"
+        hx-post="/show-phys-page"
+        hx-vals='{"type": "code"}'
+        hx-target="#modal"
+        hx-swap="outerHTML"
+      >
+        as code
+      </button>
+      {{end}}
+      <form action="/download-phys-page" method="get" hx-disable="true">
+        <button class="bg-blue-500 p-1 m-2 rounded" type="submit">
+          Download Page
+        </button>
+      </form>
       <button
         type="submit"
         class="w-1/3 absolute origin-center bg-blue-500 p-1 mt-2 rounded"
@@ -39,7 +56,18 @@
       >
         as hex
       </button>
-      {{else}}
+      {{if eq .nx "false"}}
+      <button
+        type="submit"
+        class="bg-blue-500 p-1 m-2 rounded"
+        hx-post="/show-phys-page"
+        hx-vals='{"type": "code"}'
+        hx-target="#modal"
+        hx-swap="outerHTML"
+      >
+        as code
+      </button>
+      {{end}} {{else}}
       <button
         type="submit"
         class="bg-blue-500 p-1 m-2 rounded"
@@ -102,8 +130,14 @@
       </div>
     </div>
     {{else if eq .type "string"}}
-    <div class="m-2 w-auto break-words whitespace-normal overflow-hidden">
+    <div
+      class="m-2 w-auto break-words whitespace-normal overflow-hidden text-wrap"
+    >
       {{.string}}
+    </div>
+    {{else if eq .type "code"}}
+    <div class="m-2 p-3 w-auto break-words whitespace-normal overflow-hidden">
+      <pre>{{.code}}</pre>
     </div>
     {{else}}
     <div

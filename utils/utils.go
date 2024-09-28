@@ -8,10 +8,12 @@ package utils
 import "C"
 
 import (
+	"bufio"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -68,6 +70,12 @@ type PTEntry struct {
 	Kp2   bool // key protection 2
 	Kp3   bool // key protection 3
 	Nx    bool // no Execute
+}
+
+type Section struct {
+	Name   string
+	Offset uint64
+	Code   string
 }
 
 func (entry PTEntry) toggleColor() PTEntry {
@@ -493,4 +501,83 @@ func ConvertHexStringsToBytes(hexStrings []string) ([]byte, error) {
 		data[i] = b
 	}
 	return data, nil
+}
+
+func parseDisassembly(data string) ([]Section, error) {
+	var sections []Section
+
+	scanner := bufio.NewScanner(strings.NewReader(data))
+	var currentSection Section
+	var codeBuilder strings.Builder
+	inCodeBlock := false
+
+	// Regular expressions to match the lines
+	sectionRegex := regexp.MustCompile(`^000000000000[0-9a-f]{4} <(.+?)>:\s*$`)
+	codeRegex := regexp.MustCompile(`^(\s*\w+:\s+.+)`)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Match section header
+		if sectionRegex.MatchString(line) {
+			if inCodeBlock { // If we were in a code block, save the previous section
+				currentSection.Code = codeBuilder.String()
+				sections = append(sections, currentSection)
+				codeBuilder.Reset()
+			}
+
+			// Extract section name and offset
+			matches := sectionRegex.FindStringSubmatch(line)
+			if len(matches) > 1 {
+				currentSection.Name = matches[1]
+				offset, err := strconv.ParseUint(line[:16], 16, 64) // First 16 characters for the offset
+				if err != nil {
+					return nil, fmt.Errorf("Couldn't parse the offsets of the code")
+				}
+				currentSection.Offset = offset
+				inCodeBlock = true
+			}
+			continue
+		}
+
+		// Match code lines
+		if inCodeBlock && codeRegex.MatchString(line) {
+			codeBuilder.WriteString(line + "\n")
+		}
+	}
+
+	// Save the last section if exists
+	if inCodeBlock {
+		currentSection.Code = codeBuilder.String()
+		sections = append(sections, currentSection)
+	}
+
+	return sections, nil
+}
+
+func GetProgPath(pid uint64) (string, error) {
+	path := fmt.Sprintf("/proc/%d/exe", pid)
+	cmd := exec.Command("readlink", path)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("Failed to execute readlink on %s", path)
+	}
+	return (strings.ReplaceAll(string(output), "\n", "")), nil
+}
+
+func ParseProgramCode(pid uint64) ([]Section, error) {
+	progPath, err := GetProgPath(pid)
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command("objdump", "-d", "-M", "intel", progPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("Failed to execute \"%s\".\nCheck if objdump exists on your system!", cmd)
+	}
+	codeSections, err := parseDisassembly(string(output))
+	if err != nil {
+		return nil, err
+	}
+	return codeSections, nil
 }
