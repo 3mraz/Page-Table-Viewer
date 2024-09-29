@@ -565,11 +565,13 @@ func SavePhysPageHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println("Error while converting phys. page to bytes")
 		http.Error(w, "Conversion to bytes failed", http.StatusBadRequest)
+		return
 	}
 	pfn, err := strconv.ParseUint(utils.Virt2Phys("0x"+currentMemPage.addresses[0], pid)[2:], 16, 64)
 	if err != nil {
 		fmt.Println("Error", err)
 		http.Error(w, "Error parsing pfn in SavePhysPageHandler", http.StatusBadRequest)
+		return
 	}
 	utils.WritePhysPage(pfn>>12, data)
 }
@@ -626,6 +628,36 @@ func DownloadPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/text")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", "page.txt"))
 	w.Write([]byte(strBuilder.String()))
+}
+
+func UploadPhysPageHandler(w http.ResponseWriter, r *http.Request) {
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		fmt.Printf("Couldn't open uploaded file %s", err)
+		http.Error(w, "Couldn't open uploaded file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+	fileContent, err := io.ReadAll(file)
+	if err != nil {
+		fmt.Printf("Couldn't read uploaded file %s", err)
+		http.Error(w, "Couldn't read uploaded file", http.StatusBadRequest)
+		return
+	}
+	cleanHexString := strings.Fields(string(fileContent))
+	data, err := utils.ConvertHexStringsToBytes(cleanHexString)
+	if err != nil {
+		fmt.Printf("Couldn't convert file data: %s", err)
+		http.Error(w, "Couldn't convert file data", http.StatusBadRequest)
+		return
+	}
+	pfn, err := strconv.ParseUint(utils.Virt2Phys("0x"+currentMemPage.addresses[0], pid)[2:], 16, 64)
+	if err != nil {
+		fmt.Println("Error", err)
+		http.Error(w, "Error parsing pfn in SavePhysPageHandler", http.StatusBadRequest)
+		return
+	}
+	utils.WritePhysPage(pfn>>12, data)
 }
 
 func ShowInfoModalHandler(w http.ResponseWriter, r *http.Request) {

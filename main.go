@@ -30,6 +30,7 @@ func main() {
 	http.HandleFunc("/save-entry", handlers.SaveEntryHandler)
 	http.HandleFunc("/show-phys-page", handlers.ShowPhysPageHandler)
 	http.HandleFunc("/download-phys-page", handlers.DownloadPhysPageHandler)
+	http.HandleFunc("/upload-phys-page", handlers.UploadPhysPageHandler)
 	http.HandleFunc("/save-phys-page", handlers.SavePhysPageHandler)
 	http.HandleFunc("/close-modal", handlers.CloseModalHandler)
 	http.HandleFunc("/close-info-modal", handlers.CloseInfoModalHandler)
