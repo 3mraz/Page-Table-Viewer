@@ -79,10 +79,10 @@ type Section struct {
 }
 
 func (entry PTEntry) toggleColor() PTEntry {
-	if entry.Color == "green" {
-		entry.Color = "red"
+	if entry.Color == "green-300" {
+		entry.Color = "red-300"
 	} else {
-		entry.Color = "green"
+		entry.Color = "green-300"
 	}
 	return entry
 }
@@ -219,9 +219,9 @@ func ParsePTEntry(entry uint64, vaddr uint64) PTEntry {
 	e.Pfn = fmt.Sprintf("0x%x", (entry>>12)&uint64((uint64(1)<<40)-1))
 	e.Vfn = fmt.Sprintf("0x%x", (vaddr))
 	if e.P {
-		e.Color = "green"
+		e.Color = "green-300"
 	} else {
-		e.Color = "red"
+		e.Color = "red-300"
 	}
 	return e
 }

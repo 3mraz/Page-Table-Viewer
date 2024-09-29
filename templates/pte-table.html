@@ -23,7 +23,7 @@
     <tbody class="w-full text-center text-xs">
       {{if not .onlyPresent}} {{range $i, $entry := .entries}}
       <tr
-        class="bg-{{$entry.Color}}-300"
+        class="bg-{{$entry.Color}}"
         hx-post="/full-entry"
         hx-vals='{"vfn": "{{$entry.Vfn}}", "read": true, "tName": "{{$.tmplName}}", "idx": {{$i}}}'
         hx-swap="outerHTML"
@@ -58,7 +58,7 @@
       </tr>
       {{end}} {{else}} {{range $i, $entry := .entries}} {{if $entry.P}}
       <tr
-        class="bg-{{$entry.Color}}-300"
+        class="bg-{{$entry.Color}}"
         hx-post="/full-entry"
         hx-vals='{"vfn": "{{$entry.Vfn}}", "read": true, "tName": "{{$.tmplName}}", "idx": {{$i}}}'
         hx-swap="outerHTML"

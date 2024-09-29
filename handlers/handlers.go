@@ -82,7 +82,7 @@ func getEntries(lvl uint64, present string, tmplName string, numEntries uint16) 
 						break
 					}
 				} else if index == 0 {
-					e := utils.PTEntry{Vfn: vfn, Color: "red", Pfn: "0x0"}
+					e := utils.PTEntry{Vfn: vfn, Color: "red-300", Pfn: "0x0"}
 					vAddrs[i] = e
 				}
 			}
@@ -296,16 +296,16 @@ func ShowPathHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	e := pml4Enries[uint16(pml4Idx)]
-	e.Color = "blue"
+	e.Color = "blue-400"
 	pml4Enries[uint16(pml4Idx)] = e
 	e = pdptEnries[uint16(pdptIdx)]
-	e.Color = "blue"
+	e.Color = "blue-400"
 	pdptEnries[uint16(pdptIdx)] = e
 	e = pdEnries[uint16(pdIdx)]
-	e.Color = "blue"
+	e.Color = "blue-400"
 	pdEnries[uint16(pdIdx)] = e
 	e = pteEnries[uint16(pteIdx)]
-	e.Color = "blue"
+	e.Color = "blue-400"
 	pteEnries[uint16(pteIdx)] = e
 	context := make(map[string]map[string]interface{})
 
@@ -411,7 +411,7 @@ func FullEntryHandler(w http.ResponseWriter, r *http.Request) {
 		e, ok = cstate[tableName][uint16(idx)]
 	}
 	if !ok {
-		e = utils.PTEntry{Vfn: entryVfn, Pfn: "0x0", Color: "red"}
+		e = utils.PTEntry{Vfn: entryVfn, Pfn: "0x0", Color: "red-300"}
 	}
 
 	context := make(map[string]interface{})
