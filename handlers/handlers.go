@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"cgo_test/utils"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -18,13 +17,6 @@ import (
 	"time"
 )
 
-type MemPage struct {
-	pageBytes []byte
-	nx        string
-	addresses [256]string
-	offset    uint64
-}
-
 var (
 	pid               uint64                              = 0
 	pml4i             int64                               = -1
@@ -37,8 +29,8 @@ var (
 	only_present_pte  bool                                = false
 	cstate            map[string]map[uint16]utils.PTEntry = make(map[string]map[uint16]utils.PTEntry)
 	warnings          []string
-	currentMemPage    MemPage
-	startAddress      string
+	currentMemPage    utils.MemPage
+	baseAddr          string
 )
 
 func reset_env() {
@@ -53,11 +45,15 @@ func reset_env() {
 	only_present_pte = false
 	cstate = make(map[string]map[uint16]utils.PTEntry)
 	warnings = make([]string, 0)
+	currentMemPage = utils.MemPage{}
+	baseAddr = ""
 }
 
-func getEntries(lvl uint64, present string, tmplName string, numEntries uint16) (map[uint16]utils.PTEntry, error) {
-	if present != "" {
-		return cstate[tmplName], nil
+// Returns the entries for a particular level
+// exist: Entries already fetched
+func getEntries(lvl uint64, exist string, lvlName string, numEntries uint16) (map[uint16]utils.PTEntry, error) {
+	if exist != "" {
+		return cstate[lvlName], nil
 	} else {
 		var entries []utils.PTEntry
 		switch lvl {
@@ -70,12 +66,13 @@ func getEntries(lvl uint64, present string, tmplName string, numEntries uint16) 
 		case 3:
 			entries = utils.GetFourthLvl(pid, pml4i, pdpti, pdi)
 		default:
-			return nil, errors.New("Couln't get entries")
+			return nil, fmt.Errorf("Couln't get entries")
 		}
+		// Prepare map of indecies to entries for the template
 		vAddrs := make(map[uint16]utils.PTEntry)
 		for index, entry := range entries {
 			for i := uint16(0); i < numEntries; i++ {
-				vfn := _calc_vfn(lvl, int64(i))
+				vfn := calc_vfn(lvl, int64(i))
 				if vfn == entry.Vfn {
 					vAddrs[i] = entry
 					if index != 0 {
@@ -87,11 +84,12 @@ func getEntries(lvl uint64, present string, tmplName string, numEntries uint16) 
 				}
 			}
 		}
-		cstate[tmplName] = vAddrs
+		cstate[lvlName] = vAddrs
 		return vAddrs, nil
 	}
 }
 
+// Extract level indecies of the virt. address
 func parseVirt(virtAddr string) (pml4i int64, pdpti int64, pdi int64, ptei int64, err error) {
 	if strings.HasPrefix(virtAddr, "0x") {
 		virtNum, err := strconv.ParseUint(virtAddr[2:], 16, 64)
@@ -107,21 +105,21 @@ func parseVirt(virtAddr string) (pml4i int64, pdpti int64, pdi int64, ptei int64
 	return -1, -1, -1, -1, fmt.Errorf("Couldn't parse virtAddr")
 }
 
-func basePlusOffset(offset string) (string, error) {
-	offsetInt, err := strconv.ParseUint(offset[2:], 16, 64)
-	if err != nil {
-		return "", err
-	}
-	baseInt, err := strconv.ParseUint(startAddress[2:], 16, 64)
-	if err != nil {
-		return "", err
-	}
-	fullAddr := fmt.Sprintf("0x%s", strconv.FormatUint(baseInt+offsetInt, 16))
-	return fullAddr, nil
-}
+// func basePlusOffset(offset string) (string, error) {
+// 	offsetInt, err := strconv.ParseUint(offset[2:], 16, 64)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	baseInt, err := strconv.ParseUint(startAddr[2:], 16, 64)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	fullAddr := fmt.Sprintf("0x%s", strconv.FormatUint(baseInt+offsetInt, 16))
+// 	return fullAddr, nil
+// }
 
-func _calc_offset(vfn uint64) (uint64, error) {
-	baseInt, err := strconv.ParseUint(startAddress[2:], 16, 64)
+func calc_offset(vfn uint64) (uint64, error) {
+	baseInt, err := strconv.ParseUint(baseAddr[2:], 16, 64)
 	if err != nil {
 		fmt.Println(err)
 		return 0, err
@@ -130,7 +128,7 @@ func _calc_offset(vfn uint64) (uint64, error) {
 	return fullOffset, nil
 }
 
-func _calc_vfn(lvl uint64, idx int64) string {
+func calc_vfn(lvl uint64, idx int64) string {
 	switch lvl {
 	case 0:
 		return ("0x" + strconv.FormatInt(idx<<39, 16))
@@ -145,6 +143,7 @@ func _calc_vfn(lvl uint64, idx int64) string {
 	}
 }
 
+// Returns needed data to show a table
 func setup_temp(idx int64, lvl uint64, present string) (map[uint16]utils.PTEntry, string, string, string, bool, error) {
 	var tmplName string
 	var nxtLvlName string
@@ -163,8 +162,8 @@ func setup_temp(idx int64, lvl uint64, present string) (map[uint16]utils.PTEntry
 		tmplName = "pml4"
 		nxtLvlName = "pdpt"
 		tmplPath = "templates/pml4.html"
-		only_present = !only_present_pml4 && only_present
-		only_present_pml4 = only_present
+		only_present = !only_present_pml4 && only_present // alternate each click
+		only_present_pml4 = only_present                  // update program state
 	case 1:
 		if idx != -1 {
 			pml4i = idx
@@ -193,7 +192,7 @@ func setup_temp(idx int64, lvl uint64, present string) (map[uint16]utils.PTEntry
 		only_present = !only_present_pte && only_present
 		only_present_pte = only_present
 	default:
-		err = errors.New("Couldn't setup template")
+		err = fmt.Errorf("Couldn't setup template")
 	}
 	entries, err := getEntries(lvl, present, tmplName, numEntries)
 	if err != nil {
@@ -214,13 +213,12 @@ func MainPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func PidHandler(w http.ResponseWriter, r *http.Request) {
-	// Ensure form data is parsed
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "cannot parse form", http.StatusBadRequest)
 		return
 	}
 
-	// Parse the pid from the form value
+	// Parse pid
 	pId, err := strconv.ParseUint(r.PostFormValue("pid"), 10, 64)
 	if err != nil {
 		http.Error(w, "cannot parse process Id", http.StatusBadRequest)
@@ -230,15 +228,15 @@ func PidHandler(w http.ResponseWriter, r *http.Request) {
 		pid = pId
 	}
 
+	// Prepare to update the template
 	pidHTML := fmt.Sprintf("<label id='pid' for='virt'><b>Process Id:</b> %d</label>", pid)
-	file, err := os.Open(fmt.Sprintf("/proc/%d/maps", pid))
+
+	// Set program base address
+	baseAddr, err = utils.GetProgramBaseAddr(pid)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Cannot open file %s.", file.Name()), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("%s", err), http.StatusInternalServerError)
 		return
 	}
-	reader := bufio.NewReader(file)
-	virtAddr, err := reader.ReadString('-')
-	startAddress = fmt.Sprintf("0x%s", virtAddr[:len(virtAddr)-1])
 
 	tmpl, _ := template.New("pidHTML").Parse(pidHTML)
 	if err := tmpl.Execute(w, nil); err != nil {
@@ -247,6 +245,7 @@ func PidHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Handles the translation functionality
 func Virt2PhysHandler(w http.ResponseWriter, r *http.Request) {
 	virtAddr := r.PostFormValue("virt")
 	phys := ""
@@ -287,6 +286,7 @@ func ShowPathHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		return
 	}
+	// Setup data for all levels
 	pml4Enries, pml4TmplName, pml4NxtLvlName, pml4TmplPath, _, pml4_err := setup_temp(0, 0, "")
 	pdptEnries, pdptTmplName, pdptNxtLvlName, pdptTmplPath, _, pdpt_err := setup_temp(pml4Idx, 1, "")
 	pdEnries, pdTmplName, pdNxtLvlName, pdTmplPath, _, pd_err := setup_temp(pdptIdx, 2, "")
@@ -295,6 +295,7 @@ func ShowPathHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Error while getting entries")
 		return
 	}
+	// Highlight entries with blue
 	e := pml4Enries[uint16(pml4Idx)]
 	e.Color = "blue-400"
 	pml4Enries[uint16(pml4Idx)] = e
@@ -391,6 +392,7 @@ func GeneralHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl.ExecuteTemplate(w, tmplName, context)
 }
 
+// Handles showing the extended entry
 func FullEntryHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -469,6 +471,7 @@ func SaveEntryHandler(wr http.ResponseWriter, r *http.Request) {
 	eValues["w"] = w
 	eValues["wt"] = wt
 	eValues["g"] = g
+	// Update entry in memory
 	e, err := utils.UpdateEntry(eValues, pid)
 	if err != nil {
 		http.Error(wr, "Failed to update the entry", http.StatusBadRequest)
@@ -481,6 +484,7 @@ func SaveEntryHandler(wr http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Update entry in program state
 	cstate[tableName][uint16(idx)] = e
 }
 
@@ -488,10 +492,11 @@ func ShowPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 	t := r.PostFormValue("type")
 	pageObtained := r.PostFormValue("obtained")
 	context := make(map[string]interface{})
+	// For string view of phys. page
 	if t == "string" {
-		pageString := string(currentMemPage.pageBytes)
+		pageString := string(currentMemPage.PageBytes)
 		context["string"] = pageString
-	} else if t == "hex" {
+	} else if t == "hex" { // For hex view
 		if pageObtained != "true" {
 			pfn, err := strconv.ParseUint(r.PostFormValue("pfn")[2:], 16, 64)
 			if err != nil {
@@ -505,61 +510,68 @@ func ShowPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Couldn't parse vfn in ShowPhysPage", http.StatusBadRequest)
 				return
 			}
-			currentMemPage.offset, err = _calc_offset(vfn)
+			// Update current viewing phys. page
+			currentMemPage.Offset, err = calc_offset(vfn)
 			if err != nil {
 				fmt.Println("Couldn't parse the offset of the current page")
 				http.Error(w, "Couldn't parse the offset of the current page", http.StatusInternalServerError)
 				return
 			}
-			currentMemPage.nx = r.PostFormValue("nx")
-			currentMemPage.pageBytes = utils.ReadPhysPage(pfn)
+			currentMemPage.Nx = r.PostFormValue("nx")
+			currentMemPage.PageBytes = utils.ReadPhysPage(pfn)
 			var i uint64
 			for ; i < 256; i++ {
-				currentMemPage.addresses[i] = strconv.FormatUint(vfn+(i*uint64(16)), 16)
+				currentMemPage.Addresses[i] = strconv.FormatUint(vfn+(i*uint64(16)), 16)
 			}
 		}
+
 		// TODO: use dynamic size based on page size
+
+		// Use 2 different arrays for better layout in the template
 		var bytes1 [256][8]string
 		var bytes2 [256][8]string
 		for i := 0; i < 4096; i++ {
 			if (i % 16) < 8 {
-				bytes1[i/16][i%8] = fmt.Sprintf("%02x", currentMemPage.pageBytes[i])
+				bytes1[i/16][i%8] = fmt.Sprintf("%02x", currentMemPage.PageBytes[i])
 			} else {
-				bytes2[i/16][i%8] = fmt.Sprintf("%02x", currentMemPage.pageBytes[i])
+				bytes2[i/16][i%8] = fmt.Sprintf("%02x", currentMemPage.PageBytes[i])
 			}
 		}
 		context["bytes1"] = bytes1
 		context["bytes2"] = bytes2
-		context["addresses"] = currentMemPage.addresses
-	} else if t == "code" {
+		context["addresses"] = currentMemPage.Addresses
+	} else if t == "code" { // For code view
+		// Parse the output of objdump
 		codeSections, err := utils.ParseProgramCode(pid)
 		if err != nil {
 			context["code"] = fmt.Sprintf("%s", err)
 		} else {
 			strBuilder := strings.Builder{}
 			for _, section := range codeSections {
-				if (section.Offset >= currentMemPage.offset) && (section.Offset < (currentMemPage.offset + uint64(4096))) {
+				// If section inside page boundaries, add it's fields to the template
+				if (section.Offset >= currentMemPage.Offset) && (section.Offset < (currentMemPage.Offset + uint64(4096))) {
 					strBuilder.WriteString(fmt.Sprintf("%016x     %s\n%s\n\n\n", section.Offset, section.Name, section.Code))
 				}
 			}
 			context["code"] = strBuilder.String()
 		}
-	} else { // for edit view
+	} else { // For edit view
 		var b [256][16]string
 		for i := 0; i < 4096; i++ {
-			b[i/16][i%16] = fmt.Sprintf("%02x", currentMemPage.pageBytes[i])
+			b[i/16][i%16] = fmt.Sprintf("%02x", currentMemPage.PageBytes[i])
 		}
 		context["bytes"] = b
-		context["addresses"] = currentMemPage.addresses
+		context["addresses"] = currentMemPage.Addresses
 	}
 	context["type"] = t
-	context["nx"] = currentMemPage.nx
+	context["nx"] = currentMemPage.Nx
 	tmpl := template.Must(template.ParseFiles("templates/modal.html"))
 	tmpl.ExecuteTemplate(w, "modal", context)
 }
 
 func SavePhysPageHandler(w http.ResponseWriter, r *http.Request) {
 	physPage := r.PostFormValue("phys-page")
+	// Strip all white spaces
 	physPageSlice := strings.Fields(physPage)
 	data, err := utils.ConvertHexStringsToBytes(physPageSlice)
 	if err != nil {
@@ -567,12 +579,13 @@ func SavePhysPageHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Conversion to bytes failed", http.StatusBadRequest)
 		return
 	}
-	pfn, err := strconv.ParseUint(utils.Virt2Phys("0x"+currentMemPage.addresses[0], pid)[2:], 16, 64)
+	pfn, err := strconv.ParseUint(utils.Virt2Phys("0x"+currentMemPage.Addresses[0], pid)[2:], 16, 64)
 	if err != nil {
 		fmt.Println("Error", err)
 		http.Error(w, "Error parsing pfn in SavePhysPageHandler", http.StatusBadRequest)
 		return
 	}
+	// Write page to memory
 	utils.WritePhysPage(pfn>>12, data)
 }
 
@@ -618,7 +631,9 @@ func DumpPhysPagesHandler(w http.ResponseWriter, r *http.Request) {
 
 func DownloadPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 	strBuilder := strings.Builder{}
-	for i, b := range currentMemPage.pageBytes {
+
+	// Formatting page
+	for i, b := range currentMemPage.PageBytes {
 		if (i % 16) == 15 {
 			strBuilder.WriteString(fmt.Sprintf("%02x\n", b))
 		} else {
@@ -651,7 +666,7 @@ func UploadPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Couldn't convert file data", http.StatusBadRequest)
 		return
 	}
-	pfn, err := strconv.ParseUint(utils.Virt2Phys("0x"+currentMemPage.addresses[0], pid)[2:], 16, 64)
+	pfn, err := strconv.ParseUint(utils.Virt2Phys("0x"+currentMemPage.Addresses[0], pid)[2:], 16, 64)
 	if err != nil {
 		fmt.Println("Error", err)
 		http.Error(w, "Error parsing pfn in SavePhysPageHandler", http.StatusBadRequest)
@@ -673,6 +688,7 @@ func ShowProcessMapsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 	strBuilder := strings.Builder{}
+	// Read maps file for the process
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -687,12 +703,15 @@ func ShowProcessMapsHandler(w http.ResponseWriter, r *http.Request) {
 
 func ShowBinarySectionsHandler(w http.ResponseWriter, r *http.Request) {
 	context := make(map[string]interface{})
+	// Program path on the system
 	progPath, err := utils.GetProgPath(pid)
 	if err != nil {
 		http.Error(w, "Cannot get process name", http.StatusInternalServerError)
 		return
 	}
+	// Define command (show binary sections)
 	cmd := exec.Command("objdump", "-h", progPath)
+	// Execute command and return output
 	output, err := cmd.CombinedOutput()
 	var o string
 	if err != nil {
@@ -704,6 +723,8 @@ func ShowBinarySectionsHandler(w http.ResponseWriter, r *http.Request) {
 	templ := template.Must(template.ParseFiles("templates/info-modal.html"))
 	templ.ExecuteTemplate(w, "info-content", context)
 }
+
+// ******** Interactive GDB Section ********
 
 var (
 	gdbCmd           *exec.Cmd
@@ -720,6 +741,10 @@ func readChannel() {
 	var shouldBreak bool
 
 	for {
+		// non-blocking select needed here
+		// either reads a value or breaks
+		// out of the loop if no value was
+		// read after one second
 		select {
 		case val := <-ch:
 			if strings.Contains(val, "(gdb) ") {
@@ -730,12 +755,14 @@ func readChannel() {
 			shouldBreak = true
 		}
 
+		// break doesn't work inside select
 		if shouldBreak {
 			break
 		}
 	}
 }
 
+// Called concurrently
 func readStdout() {
 	stdoutScanner := bufio.NewScanner(stdoutPipe)
 	for stdoutScanner.Scan() {
@@ -771,8 +798,10 @@ func AttachGDBHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error starting GDB", http.StatusInternalServerError)
 			return
 		}
+		// Get process instance
 		gdbProcess = gdbCmd.Process
 
+		// Channel to communicate data from go routine to main process
 		ch = make(chan string)
 		go readStdout()
 		readChannel()
@@ -786,8 +815,10 @@ func AttachGDBHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func SendCommandHandler(w http.ResponseWriter, r *http.Request) {
+	// For gdb view in template
 	gdb := "true"
 	sigint := r.PostFormValue("sigint")
+	// Send SIGINT to GDB
 	if sigint == "true" {
 		if gdbProcess != nil {
 			if err := gdbProcess.Signal(syscall.SIGINT); err != nil {
@@ -801,7 +832,8 @@ func SendCommandHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if command == "q" {
+		// Ensure GDB isn't stuck before exiting
+		if command == "q" || command == "quit" {
 			if gdbProcess != nil {
 				if err := gdbProcess.Signal(syscall.SIGINT); err != nil {
 					fmt.Println("Failed to send SIGINT:", err)
@@ -809,16 +841,18 @@ func SendCommandHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		// Send command to stdin
 		if _, err := stdinPipe.Write([]byte(command + "\n")); err != nil {
 			http.Error(w, "Couldn't execute command on GDB", http.StatusInternalServerError)
 			fmt.Println("Couldn't execute command on GDB")
 			return
 		}
 
+		// Append command and output for the template
 		gdbOutput = append(gdbOutput, fmt.Sprintf("(gdb) %s", command))
 		readChannel()
 
-		if command == "q" {
+		if command == "q" || command == "quit" {
 			gdb = ""
 			gdbSessionActive = false
 			close(ch)

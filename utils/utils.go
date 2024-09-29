@@ -9,7 +9,6 @@ import "C"
 
 import (
 	"bufio"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -21,18 +20,19 @@ import (
 	"unsafe"
 )
 
-type Entry struct {
-	pid    uint64
-	vaddr  uintptr
-	pgd    uint64
-	p4d    uint64
-	pud    uint64
-	pmd    uint64
-	pte    uint64
-	valid  uint64
-	cEntry C.ptedit_entry_t
-}
+// type Entry struct {
+// 	pid    uint64
+// 	vaddr  uintptr
+// 	pgd    uint64
+// 	p4d    uint64
+// 	pud    uint64
+// 	pmd    uint64
+// 	pte    uint64
+// 	valid  uint64
+// 	cEntry C.ptedit_entry_t
+// }
 
+// Index of each entry for every level
 type Translation struct {
 	Pml4 string `json:"pml4"`
 	Pdpt string `json:"pdpt"`
@@ -40,10 +40,18 @@ type Translation struct {
 	Pte  string `json:"pte"`
 }
 
+// For memory dump
 type Page struct {
 	Content     string      `json:"content"`
 	Vfn         string      `json:"vfn"`
 	Translation Translation `json:"translation"`
+}
+
+type MemPage struct {
+	PageBytes []byte
+	Nx        string
+	Addresses [256]string
+	Offset    uint64
 }
 
 type PTEntry struct {
@@ -72,7 +80,7 @@ type PTEntry struct {
 	Nx    bool // no Execute
 }
 
-type Section struct {
+type CodeSection struct {
 	Name   string
 	Offset uint64
 	Code   string
@@ -98,7 +106,7 @@ func ValidPhys(physAddr string) bool {
 }
 
 func replacePfn(pte, pfn uint64) uint64 {
-	// Mask to clear the PFN bits (assuming PFN is in bits 12 through 51)
+	// Mask to clear the PFN bits (PFN is in bits 12 through 51)
 	const pfnMask uint64 = 0x000FFFFFFFFFF000
 
 	// Clear the PFN bits in the PTE
@@ -110,19 +118,19 @@ func replacePfn(pte, pfn uint64) uint64 {
 	return pte
 }
 
-func InitEntry(cEntry C.ptedit_entry_t) Entry {
-	var entry Entry
-	entry.pid = uint64(cEntry.pid)
-	entry.vaddr = uintptr(cEntry.vaddr)
-	entry.pgd = uint64(binary.LittleEndian.Uint64(cEntry.anon0[:8]))
-	entry.p4d = uint64(binary.LittleEndian.Uint64(cEntry.anon1[:8]))
-	entry.pud = uint64(binary.LittleEndian.Uint64(cEntry.anon2[:8]))
-	entry.pmd = uint64(binary.LittleEndian.Uint64(cEntry.anon3[:8]))
-	entry.pte = uint64(cEntry.pte)
-	entry.valid = uint64(cEntry.valid)
-	entry.cEntry = cEntry
-	return entry
-}
+// func InitEntry(cEntry C.ptedit_entry_t) Entry {
+// 	var entry Entry
+// 	entry.pid = uint64(cEntry.pid)
+// 	entry.vaddr = uintptr(cEntry.vaddr)
+// 	entry.pgd = uint64(binary.LittleEndian.Uint64(cEntry.anon0[:8]))
+// 	entry.p4d = uint64(binary.LittleEndian.Uint64(cEntry.anon1[:8]))
+// 	entry.pud = uint64(binary.LittleEndian.Uint64(cEntry.anon2[:8]))
+// 	entry.pmd = uint64(binary.LittleEndian.Uint64(cEntry.anon3[:8]))
+// 	entry.pte = uint64(cEntry.pte)
+// 	entry.valid = uint64(cEntry.valid)
+// 	entry.cEntry = cEntry
+// 	return entry
+// }
 
 func Virt2Phys(virtAddr string, pid uint64) string {
 	virt, prefixFound := strings.CutPrefix(virtAddr, "0x")
@@ -137,26 +145,30 @@ func Virt2Phys(virtAddr string, pid uint64) string {
 	return fmt.Sprintf("0x%x", phys)
 }
 
+// Tell PTEditor to use kernel implementation
 func PteditKernelImpl() {
 	C.ptedit_use_implementation(C.PTEDIT_IMPL_KERNEL)
 }
 
+// Initialize PTEditor
 func PteditInit() int {
 	return int(C.ptedit_init())
 }
 
+// PTEditor clean up before exiting
 func PteditCleanup() {
 	C.ptedit_cleanup()
 }
 
-func GetRootPhysAddr(pid uint64) uintptr {
-	return uintptr(C.ptedit_get_paging_root(C.int(pid)))
-}
+// func GetRootPhysAddr(pid uint64) uintptr {
+// 	return uintptr(C.ptedit_get_paging_root(C.int(pid)))
+// }
 
-func GetSystemPageSize() uint64 {
-	return uint64(C.ptedit_get_pagesize())
-}
+// func GetSystemPageSize() uint64 {
+// 	return uint64(C.ptedit_get_pagesize())
+// }
 
+// Parse entry from uint64 into PTEntry type
 func ParsePTEntry(entry uint64, vaddr uint64) PTEntry {
 	var e PTEntry
 	if int(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_PRESENT)) == 1 {
@@ -227,13 +239,14 @@ func ParsePTEntry(entry uint64, vaddr uint64) PTEntry {
 }
 
 func bytesToHex(data []byte) string {
-	hexString := ""
+	var hexString string
 	for i := 0; i < len(data); i++ {
 		hexString += fmt.Sprintf("%02X", data[i])
 	}
 	return hexString
 }
 
+// Traverse all page table levels and return mapped phys. pages
 func GetAllPhysPages(pid uint64) []Page {
 	var physPages []Page
 	tableSize := 512
@@ -307,6 +320,7 @@ func GetFirstLvl(pid uint64) []PTEntry {
 	entries := C.get_mapped_PML4_entries(C.size_t(pid))
 	defer C.free(unsafe.Pointer(entries))
 	length := int(C.FIRST_LEVEL_ENTRIES)
+	// Magic conversion from C entries into parsable Go entries
 	goEntries := (*[1 << 30]C.PTEntry)(unsafe.Pointer(entries))[:length:length]
 	for _, v := range goEntries {
 		if v.entry != 0 {
@@ -369,11 +383,12 @@ func PrintStruct(ptEntry PTEntry) {
 	}
 }
 
-func numOfEntriesPerLvl() int {
-	return int(C.num_entries_per_lvl())
-}
+// func numOfEntriesPerLvl() int {
+// 	return int(C.num_entries_per_lvl())
+// }
 
 func UpdateEntry(entryValues map[string]interface{}, pid uint64) (PTEntry, error) {
+	// Type assertion as string
 	pfn, ok := entryValues["pfn"].(string)
 	if !ok {
 		return PTEntry{}, fmt.Errorf("pfn is of the wrong type")
@@ -402,7 +417,6 @@ func UpdateEntry(entryValues map[string]interface{}, pid uint64) (PTEntry, error
 	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_RW)) != entryValues["w"] {
 		e.W = !e.W
 		entry ^= (uint64(1) << uint64(C.PTEDIT_PAGE_BIT_RW))
-		// C.ptedit_pte_clear_bit(unsafe.Pointer(vfn_ptr), C.int(pid), C.PTEDIT_PAGE_BIT_RW)
 	}
 	if uint64(C.bit_set(C.size_t(entry), C.PTEDIT_PAGE_BIT_USER)) != entryValues["u"] {
 		e.U = !e.U
@@ -464,12 +478,12 @@ func UpdateEntry(entryValues map[string]interface{}, pid uint64) (PTEntry, error
 		e.Pfn = pfn
 		entry = replacePfn(entry, pfn_int)
 	}
-	C.ptedit_print_entry(cEntry.pte)
 	cEntry.pte = C.size_t(entry)
 	C.ptedit_update_kernel(unsafe.Pointer(vfn_ptr), C.int(pid), &cEntry)
+	// Evict old translation
 	C.ptedit_invalidate_tlb(unsafe.Pointer(vfn_ptr))
+	// Load new entry into TLB (might not be useful)
 	cEntry = C.ptedit_resolve_kernel(unsafe.Pointer(vfn_ptr), C.int(pid))
-	C.ptedit_print_entry(cEntry.pte)
 	return e, nil
 }
 
@@ -503,11 +517,12 @@ func ConvertHexStringsToBytes(hexStrings []string) ([]byte, error) {
 	return data, nil
 }
 
-func parseDisassembly(data string) ([]Section, error) {
-	var sections []Section
+// Parses code sections (output of objdump)
+func parseDisassembly(data string) ([]CodeSection, error) {
+	var sections []CodeSection
 
 	scanner := bufio.NewScanner(strings.NewReader(data))
-	var currentSection Section
+	var currentSection CodeSection
 	var codeBuilder strings.Builder
 	inCodeBlock := false
 
@@ -565,7 +580,7 @@ func GetProgPath(pid uint64) (string, error) {
 	return (strings.ReplaceAll(string(output), "\n", "")), nil
 }
 
-func ParseProgramCode(pid uint64) ([]Section, error) {
+func ParseProgramCode(pid uint64) ([]CodeSection, error) {
 	progPath, err := GetProgPath(pid)
 	if err != nil {
 		return nil, err
@@ -580,4 +595,14 @@ func ParseProgramCode(pid uint64) ([]Section, error) {
 		return nil, err
 	}
 	return codeSections, nil
+}
+
+func GetProgramBaseAddr(pid uint64) (string, error) {
+	file, err := os.Open(fmt.Sprintf("/proc/%d/maps", pid))
+	if err != nil {
+		return "", fmt.Errorf("Couldn't open file %s", file.Name())
+	}
+	reader := bufio.NewReader(file)
+	virtAddr, err := reader.ReadString('-')
+	return fmt.Sprintf("0x%s", virtAddr[:len(virtAddr)-1]), nil
 }
