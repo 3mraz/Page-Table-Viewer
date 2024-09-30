@@ -105,18 +105,14 @@ func parseVirt(virtAddr string) (pml4i int64, pdpti int64, pdi int64, ptei int64
 	return -1, -1, -1, -1, fmt.Errorf("Couldn't parse virtAddr")
 }
 
-// func basePlusOffset(offset string) (string, error) {
-// 	offsetInt, err := strconv.ParseUint(offset[2:], 16, 64)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	baseInt, err := strconv.ParseUint(startAddr[2:], 16, 64)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	fullAddr := fmt.Sprintf("0x%s", strconv.FormatUint(baseInt+offsetInt, 16))
-// 	return fullAddr, nil
-// }
+func basePlusOffset(offset uint64) (string, error) {
+	baseInt, err := strconv.ParseUint(baseAddr[2:], 16, 64)
+	if err != nil {
+		return "", err
+	}
+	fullAddr := fmt.Sprintf("0x%s", strconv.FormatUint(baseInt+offset, 16))
+	return fullAddr, nil
+}
 
 func calc_offset(vfn uint64) (uint64, error) {
 	baseInt, err := strconv.ParseUint(baseAddr[2:], 16, 64)
@@ -550,7 +546,13 @@ func ShowPhysPageHandler(w http.ResponseWriter, r *http.Request) {
 			for _, section := range codeSections {
 				// If section inside page boundaries, add it's fields to the template
 				if (section.Offset >= currentMemPage.Offset) && (section.Offset < (currentMemPage.Offset + uint64(4096))) {
-					strBuilder.WriteString(fmt.Sprintf("%016x     %s\n%s\n\n\n", section.Offset, section.Name, section.Code))
+					addr, err := basePlusOffset(section.Offset)
+					if err != nil {
+						fmt.Println(err)
+						http.Error(w, fmt.Sprintf("%s", err), http.StatusInternalServerError)
+						return
+					}
+					strBuilder.WriteString(fmt.Sprintf("%s     %s\n%s\n\n\n", addr, section.Name, section.Code))
 				}
 			}
 			context["code"] = strBuilder.String()
