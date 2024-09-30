@@ -6,7 +6,7 @@ CSS_OUTPUT=static/css/output.css
 GO_FILES=./cmd/web/*.go
 
 # Default target
-all: build run
+all: build
 
 # Build Tailwind CSS
 build-css:
@@ -29,10 +29,6 @@ build: build-css build-src
 	go build main.go 
 	@echo "Build completed!"
 
-# Run Go project
-run: build 
-	@echo "Running Go project..."
-	./main
 
 # Clean up build artifacts
 clean:

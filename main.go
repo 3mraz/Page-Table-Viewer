@@ -6,9 +6,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
+	var port string
+	if len(os.Args) < 2 {
+		port = "8000"
+	} else {
+		port = os.Args[1]
+	}
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	utils.PteditKernelImpl()
@@ -40,7 +47,7 @@ func main() {
 	http.HandleFunc("/show-sections", handlers.ShowBinarySectionsHandler)
 	http.HandleFunc("/attach", handlers.AttachGDBHandler)
 	http.HandleFunc("/send-cmd", handlers.SendCommandHandler)
-	log.Fatal(http.ListenAndServe(":8000", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
 
 	utils.PteditCleanup()
 }
