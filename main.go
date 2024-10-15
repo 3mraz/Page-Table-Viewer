@@ -21,7 +21,7 @@ func main() {
 	utils.PteditKernelImpl()
 	ind := utils.PteditInit()
 	if ind == 0 {
-		fmt.Println("ptedit initialized")
+		fmt.Printf("localhost:%s\n", port)
 	} else {
 		fmt.Println("Could not initialize ptedit (did you load the kernel module?)")
 	}

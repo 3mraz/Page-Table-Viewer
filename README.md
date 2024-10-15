@@ -1,63 +1,74 @@
-# Cysec Project: Page-Table Viewer
+# Introduction
 
-**Student**: Amr Jaafar
+This program is designed to inspect and live patch the memory and page tables of a process.
+It relies on [PTEditor](https://github.com/misc0110/PTEditor) and it implements a UI for some of its functionalities as well as some extra features such as interactive GDB.
 
-**Advisor**: Fabian Thomas
+# Project Structure
 
-**Project Goals**: Microarchitectural attacks often require interaction with low-level data structures, such as page tables. On Linux there is already a tool (PTEditor) that can read and write Linux page tables from C/C++ code, but there is no interactive viewer/editor yet. This project is about engineering such a viewer/editor based on PTEditor. The tool should provide a GUI that visualizes the page table and allows for live patching. Further, it should run as a statically linked Web App on remote machines, so that easy access via SSH port forwarding is possible.
+## src
 
-**Handout**: 13.05.2024
+Contains the code for PTEditor and extra wrapper functions in `utils.c`
 
-## Structure
+## static
 
-Initially, this repository contains the following:
+Tailwindcss and HTMX.
 
-- `README.md`: This readme. **Read the entire readme!**
-- `requirements.md`: Should be updated by your supervisor once project goals and requirements are clear.
+## templates
 
-You can remove/change/add anything you want, the initial structure doesn't have to be kept.
+All HTML templates.
 
-## Documentation
+## utils
 
-Provide a brief description of what can be found in this repository.
+- Helper functions for the handlers.
+- Written in GO and use the functions of PTEditor.
 
-If your implementation is not in your repository, provide a link (or similar) to where it can be found.
+## handlers
 
-If you include your code, clearly describe how to set up, compile, run, and use your code.
-Also describe known issues and potential future work.
+Requests handlers for the webserver.
 
-## Contact
+## main.go
 
-You should have been assigned an advisor, who is your direct point of contact.
-If this did not happen, ask Michael Schwarz.
-Likely, there is also a Mattermost channel about your project.
-For any questions, problems, and progress reports, post in the Mattermost channel, as this ensures that everyone involved in the project is kept up to date and can help your.
-For personal questions, or if you want to schedule a meeting, directly contact your advisor.
-If there is a problem with your advisor (e.g., you don't get an answer in time), contact Michael Schwarz.
+- Handling initialization and cleanup for PTEditor.
+- Handlers assignment.
 
-## Checklist
+# Used Software
 
-- [x] Get a project and an advisor.
-- [ ] Discuss project goals and requirements with your advisor (Requirements should be documented in `requirements.md`).
-- [ ] Have fun with the project (Remember to start with small steps).
-- [ ] Submit everything (documentation, code) before the deadline in this repository.
-- [ ] Wait for the grade.
+- GO (v1.22.3) for the server and C for PTEditor and some wrapper functions.
+- HTMX, Tailwind CSS.
+- Node (v18.19.0)
+- npm (v9.2.0)
 
-## FAQ
+# Running The Project
 
-- **I asked a question in the Mattermost/via mail but did not receive an answer, what should I do?**
+### Debian
 
-Generally, we try to answer as quickly as possible. However, sometimes, it can take up to a week for us to answer. If you did not get an answer within a week, poke us (e.g., by writing another mail/message).
+1. Build kernel module. (First time)
+   `cd src && make`
+2. Load kernel module.
+   `sudo insmod src/module/pteditor.ko`
+3. Run `./main <port>` (default port 8000).
+4. Visit `localhost:<port>`.
 
-- **Is the submission deadline of the project a hard deadline?**
+For more information about loading the kernel module check [PTEditor](https://github.com/misc0110/PTEditor)
 
-Yes.
+# Development
 
-- **I need software/hardware/guidance/.... Whom should I contact?**
+1. Download GO complier, Node, and npm (preferably the versions used or newer).
+2. Download Tailwind CSS or use Tailwind CSS CDN
 
-Ask in the Mattermost channel. In the unlikely case that there is no answer, contact your advisor directly.
+   #### Download
 
-- **I worked on the topic, but I'd rather change the topic, can I do that?**
+   `npm install -D tailwindcss`
+   Hint: Tailwind CSS build command might not work for older Node versions.
 
-No. But you are free to stop working on the project and look for some other project in the next semester.
-However, please tell us if you do that, and don't simply ghost us.
+   #### Tailwind CSS CDN (online only)
+
+   1. Comment out the link to the tailwind stylesheet
+      `<link rel="stylesheet" href="../static/css/tailwind.css" />`
+   2. Uncomment the script tag with the cdn's url
+      `<script src="https://cdn.tailwindcss.com"></script>`
+   3. Comment out the build-css part in Makefile.
+
+3. Run `make` to build the program.
+4. Run `./main <port>` (default port 8000).
+5. Visit `localhost:<port>`.

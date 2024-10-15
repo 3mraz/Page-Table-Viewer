@@ -7,7 +7,7 @@ It relies on [PTEditor](https://github.com/misc0110/PTEditor) and it implements 
 
 ## src
 
-Contains the code for PTEditor and extra wrapper functions in utils.c
+Contains the code for PTEditor and extra wrapper functions in `utils.c`
 
 ## static
 
@@ -72,8 +72,3 @@ For more information about loading the kernel module check [PTEditor](https://gi
 3. Run `make` to build the program.
 4. Run `./main <port>` (default port 8000).
 5. Visit `localhost:<port>`.
-
-# Future Work
-
-- Simplify code and improve code quality.
-- Improve UI.
