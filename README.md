@@ -42,8 +42,8 @@ Requests handlers for the webserver.
 
 ### Debian
 
-1. Build kernel module. (First time)
-   `cd src && make`
+1. Build the project.
+   `make`
 2. Load kernel module.
    `sudo insmod src/module/pteditor.ko`
 3. Run `./main <port>` (default port 8000).
